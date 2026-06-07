@@ -2573,6 +2573,7 @@ dependencies = [
  "anyhow",
  "bytemuck",
  "env_logger",
+ "log",
  "pollster",
  "wgpu",
  "winit",
