@@ -1,15 +1,10 @@
-[package]
-name = "wowedit"
-version = "0.1.0"
-edition = "2024"
+[workspace]
+members = ["crates/app", "crates/renderer", "crates/scene", "crates/formats"]
+resolver = "2"
 
-[dependencies]
-anyhow = "1.0.102"
-bytemuck = { version = "1.25.0", features = ["derive"] }
-cgmath = "0.18.0"
-env_logger = "0.11.10"
-image = { version = "0.25.10", features = ["png", "jpeg"] }
-log = "0.4.32"
-pollster = "0.4.0"
-wgpu = "29.0.3"
-winit = "0.30.13"
+[workspace.dependencies]
+wgpu = "29"
+winit = "0.30"
+glam = "0.33"
+bytemuck = { version = "1", features = ["derive"] }
+byteorder = "1"
