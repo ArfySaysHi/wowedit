@@ -1,6 +1,7 @@
-use crate::Camera;
+use crate::camera::Camera;
 use winit::keyboard::KeyCode;
 
+#[allow(dead_code)]
 pub struct CameraController {
     pub speed: f32,
     pub is_forward_pressed: bool,
@@ -10,6 +11,7 @@ pub struct CameraController {
 }
 
 impl CameraController {
+    #[allow(dead_code)]
     pub fn new(speed: f32) -> Self {
         Self {
             speed,
@@ -42,6 +44,7 @@ impl CameraController {
         }
     }
 
+    #[allow(dead_code)]
     pub fn update_camera(&self, camera: &mut Camera) {
         use cgmath::InnerSpace;
         let forward = camera.target - camera.eye;
