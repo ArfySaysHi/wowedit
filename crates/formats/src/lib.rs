@@ -1,11 +1,8 @@
+pub mod adt;
 pub mod chunks;
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        assert_eq!(1, 1);
-    }
-}
+pub mod dbc;
+pub mod m2;
+pub mod mpq;
+pub mod storage;
+pub mod version;
+pub mod wmo;
