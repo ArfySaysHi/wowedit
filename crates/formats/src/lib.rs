@@ -1,6 +1,7 @@
 pub mod adt;
 pub mod chunks;
 pub mod dbc;
+pub mod loader;
 pub mod m2;
 pub mod mpq;
 pub mod storage;

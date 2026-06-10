@@ -26,7 +26,7 @@ impl MpqArchive {
             .lock()
             .map_err(|_| anyhow::anyhow!("MPQ Lock poisoned"))?;
         Ok(guard
-            .list_all()?
+            .list()?
             .iter()
             .map(|fe| abnormalize(&fe.name))
             .collect())
