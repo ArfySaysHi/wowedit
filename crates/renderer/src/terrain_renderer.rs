@@ -38,7 +38,6 @@ impl TerrainRenderer {
         pass.set_bind_group(0, camera_bind_group, &[]);
 
         for chunk in &self.chunks {
-            println!("Drawing chunk with {} indices", chunk.index_count);
             pass.set_vertex_buffer(0, chunk.vertex_buffer.slice(..));
             pass.set_index_buffer(chunk.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
             pass.draw_indexed(0..chunk.index_count, 0, 0..1);

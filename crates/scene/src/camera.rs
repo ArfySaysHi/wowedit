@@ -3,9 +3,9 @@ use glam::{EulerRot, Mat4, Quat, Vec3};
 // The camera scene object which will contain only the things we need for moving, rotating and
 // otherwise messing with the scene object. NO RENDERING - Edna Mode
 pub struct Camera {
-    position: Vec3,
-    yaw: f32,   // Y axis rotation (left/right)
-    pitch: f32, // X axis rotation (up/down)
+    pub position: Vec3,
+    pub yaw: f32,   // Y axis rotation (left/right)
+    pub pitch: f32, // X axis rotation (up/down)
 }
 
 impl Camera {
@@ -49,6 +49,17 @@ impl Camera {
         Self {
             position: self.position,
             yaw: self.yaw,
+            pitch,
+        }
+    }
+
+    pub fn look_at(position: Vec3, target: Vec3) -> Self {
+        let dir = (target - position).normalize();
+        let pitch = dir.y.asin();
+        let yaw = dir.z.atan2(dir.x) - std::f32::consts::FRAC_PI_2;
+        Self {
+            position,
+            yaw,
             pitch,
         }
     }

@@ -34,8 +34,16 @@ impl ApplicationHandler for App {
         let wgpu = pollster::block_on(WgpuState::new(Arc::clone(&window))).unwrap();
 
         // Load camera
-        let camera = Camera::new(Vec3::new(-4000.0, 9500.0, -4000.0))
-            .with_pitch(-std::f32::consts::FRAC_PI_3);
+        let terrain_center = Vec3::new(266.0, 250.0, 8800.0);
+        let camera = Camera::look_at(
+            terrain_center + Vec3::new(0.0, 3000.0, 200.0), // offset Z slightly
+            terrain_center,
+        );
+        println!("camera pos: {:?}", camera.position);
+        println!("camera pitch: {}, yaw: {}", camera.pitch, camera.yaw);
+        let test_vp = camera.build_view_proj(1.0);
+        println!("test view_proj: {:?}", test_vp);
+
         let gpu_camera = GpuCamera::new(&wgpu.device);
 
         // Load terrain
@@ -47,6 +55,10 @@ impl ApplicationHandler for App {
         let loader = AssetLoader::new(Box::new(storage), WoWVersion::WotLK);
         let adt = loader.load_adt("Azeroth", 32, 48).unwrap();
         let terrain = scene::terrain::Terrain::from(adt);
+
+        let mesh = ChunkMesh::from_chunk(&terrain.chunks[0]);
+        println!("first vertex: {:?}", mesh.vertices[0].position);
+        println!("last vertex: {:?}", mesh.vertices[144].position);
 
         for chunk in &terrain.chunks[..4] {
             let mesh = ChunkMesh::from_chunk(chunk);
@@ -121,6 +133,13 @@ impl ApplicationHandler for App {
                     &self.gpu_camera,
                     &self.camera,
                 ) {
+                    let vp = camera.build_view_proj(
+                        wgpu.surface_config.width as f32 / wgpu.surface_config.height as f32,
+                    );
+                    let v = glam::Vec4::new(0.0, 236.70442, 8533.334, 1.0);
+                    let clip = vp * v;
+                    println!("clip: {:?}", clip);
+                    println!("ndc: {:?}", clip / clip.w);
                     // Make sure our camera is in position
                     let aspect =
                         wgpu.surface_config.width as f32 / wgpu.surface_config.height as f32;
