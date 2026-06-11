@@ -2,31 +2,19 @@ use wgpu::*;
 
 pub struct TerrainPipeline {
     pub pipeline: RenderPipeline,
-    pub camera_bind_group_layout: BindGroupLayout,
 }
 
 impl TerrainPipeline {
-    pub fn new(device: &Device, surface_format: TextureFormat) -> Self {
+    pub fn new(
+        device: &Device,
+        surface_format: TextureFormat,
+        camera_layout: &BindGroupLayout,
+    ) -> Self {
         let shader = device.create_shader_module(include_wgsl!("shaders/terrain.wgsl"));
-
-        let camera_bind_group_layout =
-            device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-                label: Some("camera_bgl"),
-                entries: &[BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: ShaderStages::VERTEX,
-                    ty: BindingType::Buffer {
-                        ty: BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                }],
-            });
 
         let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
             label: Some("terrain_layout"),
-            bind_group_layouts: &[Some(&camera_bind_group_layout)],
+            bind_group_layouts: &[Some(camera_layout)],
             immediate_size: 0,
         });
 
@@ -36,11 +24,12 @@ impl TerrainPipeline {
             vertex: VertexState {
                 module: &shader,
                 entry_point: Some("vs_main"),
-                buffers: &[VertexBufferLayout {
-                    array_stride: std::mem::size_of::<[f32; 3]>() as u64,
-                    step_mode: VertexStepMode::Vertex,
-                    attributes: &vertex_attr_array![0 => Float32x3],
-                }],
+                //buffers: &[VertexBufferLayout {
+                //    array_stride: std::mem::size_of::<[f32; 3]>() as u64,
+                //  step_mode: VertexStepMode::Vertex,
+                //attributes: &vertex_attr_array![0 => Float32x3],
+                //}],
+                buffers: &[],
                 compilation_options: Default::default(),
             },
             fragment: Some(FragmentState {
@@ -70,9 +59,6 @@ impl TerrainPipeline {
             cache: None,
         });
 
-        Self {
-            pipeline,
-            camera_bind_group_layout,
-        }
+        Self { pipeline }
     }
 }

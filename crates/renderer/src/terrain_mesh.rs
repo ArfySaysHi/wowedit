@@ -1,10 +1,12 @@
+use crate::vertex::Vertex;
 use scene::terrain::TerrainChunk;
+use wgpu::util::{BufferInitDescriptor, DeviceExt};
 
 const CHUNK_SIZE: f32 = 533.333_3; // The entire ADT size in units
 const CELL_SIZE: f32 = CHUNK_SIZE / 8.0; // 66.6666666...
 
 pub struct ChunkMesh {
-    pub vertices: Vec<[f32; 3]>,
+    pub vertices: Vec<Vertex>,
     pub indices: Vec<u32>,
 }
 
@@ -14,13 +16,22 @@ impl ChunkMesh {
 
     pub fn from_chunk(chunk: &TerrainChunk) -> Self {
         let origin = chunk.world_position;
-        let mut vertices = Vec::with_capacity(Self::CHUNK_VERTICES);
+        let mut vertices: Vec<Vertex> = Vec::with_capacity(Self::CHUNK_VERTICES);
         let mut indices = Vec::with_capacity(Self::CHUNK_INDICES);
 
+        if vertices.len() == 1 {
+            println!("first vertex: {:?}", vertices[0].position);
+        }
+
         for idx in 0..Self::CHUNK_VERTICES {
-            let (local_x, local_y) = vertex_local_pos(idx);
-            let z = origin.z + chunk.heights[idx];
-            vertices.push([origin.x + local_x, origin.y + local_y, z]);
+            let (offset_x, offset_y) = vertex_local_pos(idx);
+            vertices.push(Vertex {
+                position: [
+                    origin.x + offset_x,
+                    origin.y + chunk.heights[idx],
+                    origin.z + offset_y,
+                ],
+            });
         }
 
         for row in 0..8 {
@@ -30,6 +41,34 @@ impl ChunkMesh {
         }
 
         Self { vertices, indices }
+    }
+}
+
+pub struct ChunkGpuBuffers {
+    pub vertex_buffer: wgpu::Buffer,
+    pub index_buffer: wgpu::Buffer,
+    pub index_count: u32,
+}
+
+impl ChunkGpuBuffers {
+    pub fn upload(device: &wgpu::Device, mesh: &ChunkMesh) -> Self {
+        let vertex_buffer = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("chunk_vb"),
+            contents: bytemuck::cast_slice(&mesh.vertices),
+            usage: wgpu::BufferUsages::VERTEX,
+        });
+
+        let index_buffer = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("chunk_ib"),
+            contents: bytemuck::cast_slice(&mesh.indices),
+            usage: wgpu::BufferUsages::INDEX,
+        });
+
+        Self {
+            vertex_buffer,
+            index_buffer,
+            index_count: mesh.indices.len() as u32,
+        }
     }
 }
 

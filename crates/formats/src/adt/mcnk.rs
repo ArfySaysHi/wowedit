@@ -16,9 +16,9 @@ pub fn parse(data: &[u8]) -> Result<Mcnk> {
 
     let area_id = read_u32_at(&mut r, 52)?;
     let holes = read_u32_at(&mut r, 60)?;
-    let pos_x = read_f32_at(&mut r, 116)?;
-    let pos_y = read_f32_at(&mut r, 120)?;
-    let pos_z = read_f32_at(&mut r, 124)?;
+    let pos_x = read_f32_at(&mut r, 104)?;
+    let pos_y = read_f32_at(&mut r, 108)?;
+    let pos_z = read_f32_at(&mut r, 112)?;
 
     r.seek(SeekFrom::Start(128))?;
     let heights = read_mcvt(&mut r)?;

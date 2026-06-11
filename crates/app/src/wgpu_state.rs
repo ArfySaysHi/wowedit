@@ -1,7 +1,9 @@
 use anyhow::Result;
+use renderer::{gpu_camera::GpuCamera, terrain_renderer::TerrainRenderer};
 use std::sync::Arc;
 use winit::window::Window;
 
+// Owns only wgpu plumbing / required setup
 pub struct WgpuState {
     pub device: wgpu::Device,
     pub queue: wgpu::Queue,
@@ -37,6 +39,10 @@ impl WgpuState {
                 trace: wgpu::Trace::default(),
             })
             .await?;
+
+        device.on_uncaptured_error(Arc::new(|error| {
+            panic!("wgpu error: {error}");
+        }));
 
         let surface_caps = surface.get_capabilities(&adapter);
         let surface_format = surface_caps
@@ -77,7 +83,12 @@ impl WgpuState {
         self.surface.configure(&self.device, &self.surface_config);
     }
 
-    pub fn render(&mut self) -> Result<()> {
+    pub fn render(
+        &mut self,
+        terrain_renderer: &TerrainRenderer,
+        depth_view: &wgpu::TextureView,
+        gpu_camera: &GpuCamera,
+    ) -> Result<()> {
         let output = match self.surface.get_current_texture() {
             wgpu::CurrentSurfaceTexture::Success(surface_texture) => surface_texture,
             wgpu::CurrentSurfaceTexture::Suboptimal(surface_texture) => {
@@ -109,16 +120,16 @@ impl WgpuState {
             });
 
         {
-            let _pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("render_pass"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view: &view,
                     resolve_target: None,
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r: 0.1,
+                            r: 0.8,
                             g: 0.1,
-                            b: 0.15,
+                            b: 0.1,
                             a: 1.0,
                         }),
                         store: wgpu::StoreOp::Store,
@@ -126,11 +137,19 @@ impl WgpuState {
                     depth_slice: None,
                 })],
                 multiview_mask: None,
-                depth_stencil_attachment: None,
+                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                    view: depth_view,
+                    depth_ops: Some(wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(1.0),
+                        store: wgpu::StoreOp::Store,
+                    }),
+                    stencil_ops: None,
+                }),
                 timestamp_writes: None,
                 occlusion_query_set: None,
             });
-            // nothing drawn yet — just clear to a dark background
+
+            terrain_renderer.draw(&mut pass, &gpu_camera.bind_group);
         }
 
         self.queue.submit(std::iter::once(encoder.finish()));
