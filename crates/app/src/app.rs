@@ -1,7 +1,7 @@
 use crate::wgpu_state::WgpuState;
 use formats::{loader::AssetLoader, storage::CompoundStorage, version::WoWVersion};
 use glam::Vec3;
-use renderer::{gpu_camera::GpuCamera, terrain_renderer::TerrainRenderer};
+use renderer::{gpu_camera::GpuCamera, terrain_mesh::ChunkMesh, terrain_renderer::TerrainRenderer};
 use scene::camera::Camera;
 use std::sync::Arc;
 use winit::{
@@ -49,7 +49,12 @@ impl ApplicationHandler for App {
         let terrain = scene::terrain::Terrain::from(adt);
 
         for chunk in &terrain.chunks[..4] {
-            println!("{:?}", chunk.world_position);
+            let mesh = ChunkMesh::from_chunk(chunk);
+            println!(
+                "Chunk at {:?}, first 3 verts: {:?}",
+                chunk.world_position,
+                &mesh.vertices[0..3]
+            );
         }
 
         let terrain_renderer = TerrainRenderer::new(
@@ -120,7 +125,6 @@ impl ApplicationHandler for App {
                     let aspect =
                         wgpu.surface_config.width as f32 / wgpu.surface_config.height as f32;
                     let view_proj = camera.build_view_proj(aspect);
-                    println!("view_proj: {:?}", view_proj);
                     gpu_camera.update_camera(&wgpu.queue, &view_proj);
 
                     // Render the frame

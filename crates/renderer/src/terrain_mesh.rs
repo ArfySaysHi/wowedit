@@ -19,10 +19,6 @@ impl ChunkMesh {
         let mut vertices: Vec<Vertex> = Vec::with_capacity(Self::CHUNK_VERTICES);
         let mut indices = Vec::with_capacity(Self::CHUNK_INDICES);
 
-        if vertices.len() == 1 {
-            println!("first vertex: {:?}", vertices[0].position);
-        }
-
         for idx in 0..Self::CHUNK_VERTICES {
             let (offset_x, offset_y) = vertex_local_pos(idx);
             vertices.push(Vertex {

@@ -1,5 +1,7 @@
 use wgpu::*;
 
+use crate::vertex::Vertex;
+
 pub struct TerrainPipeline {
     pub pipeline: RenderPipeline,
 }
@@ -24,12 +26,7 @@ impl TerrainPipeline {
             vertex: VertexState {
                 module: &shader,
                 entry_point: Some("vs_main"),
-                //buffers: &[VertexBufferLayout {
-                //    array_stride: std::mem::size_of::<[f32; 3]>() as u64,
-                //  step_mode: VertexStepMode::Vertex,
-                //attributes: &vertex_attr_array![0 => Float32x3],
-                //}],
-                buffers: &[],
+                buffers: &[Vertex::desc()],
                 compilation_options: Default::default(),
             },
             fragment: Some(FragmentState {

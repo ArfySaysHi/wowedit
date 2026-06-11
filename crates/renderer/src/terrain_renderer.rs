@@ -22,11 +22,6 @@ impl TerrainRenderer {
             .iter()
             .map(|c| {
                 let mesh = ChunkMesh::from_chunk(c);
-                println!(
-                    "vertices: {}, indices: {}",
-                    mesh.vertices.len(),
-                    mesh.indices.len()
-                );
                 ChunkGpuBuffers::upload(device, &mesh)
             })
             .collect::<Vec<ChunkGpuBuffers>>();
@@ -43,10 +38,10 @@ impl TerrainRenderer {
         pass.set_bind_group(0, camera_bind_group, &[]);
 
         for chunk in &self.chunks {
-            // pass.set_vertex_buffer(0, chunk.vertex_buffer.slice(..));
-            // pass.set_index_buffer(chunk.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
-            // pass.draw_indexed(0..chunk.index_count, 0, 0..1);
-            pass.draw(0..3, 0..1);
+            println!("Drawing chunk with {} indices", chunk.index_count);
+            pass.set_vertex_buffer(0, chunk.vertex_buffer.slice(..));
+            pass.set_index_buffer(chunk.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
+            pass.draw_indexed(0..chunk.index_count, 0, 0..1);
         }
     }
 }
