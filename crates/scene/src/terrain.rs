@@ -42,6 +42,7 @@ fn wow_to_engine(v: Vec3) -> Vec3 {
 
 impl From<formats::adt::Mcnk> for TerrainChunk {
     fn from(mcnk: formats::adt::Mcnk) -> Self {
+        println!("raw wow pos: {:?}", mcnk.position);
         Self {
             world_position: wow_to_engine(mcnk.position),
             heights: mcnk.heights,

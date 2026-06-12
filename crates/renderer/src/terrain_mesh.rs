@@ -2,8 +2,9 @@ use crate::vertex::Vertex;
 use scene::terrain::TerrainChunk;
 use wgpu::util::{BufferInitDescriptor, DeviceExt};
 
-const CHUNK_SIZE: f32 = 533.333_3; // The entire ADT size in units
-const CELL_SIZE: f32 = CHUNK_SIZE / 8.0; // 66.6666666...
+const ADT_SIZE: f32 = 533.333_3;
+const CHUNK_SIZE: f32 = ADT_SIZE / 16.0;
+const CELL_SIZE: f32 = CHUNK_SIZE / 8.0;
 
 pub struct ChunkMesh {
     pub vertices: Vec<Vertex>,
@@ -80,7 +81,8 @@ fn vertex_local_pos(idx: usize) -> (f32, f32) {
         // Is an outer vertex
         let r = row;
         let c = col;
-        (r as f32 * CELL_SIZE, c as f32 * CELL_SIZE)
+
+        (c as f32 * CELL_SIZE, r as f32 * CELL_SIZE)
     } else {
         // Is an inner vertex
         let r = row;
@@ -89,8 +91,8 @@ fn vertex_local_pos(idx: usize) -> (f32, f32) {
         // Multiply CELL_SIZE by 0.5 to place the inner vertex halfway between
         // the outer vertices, allows the cell to be divided (see cell_indices below)
         (
-            r as f32 * CELL_SIZE + CELL_SIZE * 0.5,
             c as f32 * CELL_SIZE + CELL_SIZE * 0.5,
+            r as f32 * CELL_SIZE + CELL_SIZE * 0.5,
         )
     }
 }
@@ -113,10 +115,10 @@ fn cell_indices(row: usize, col: usize) -> [u32; 12] {
 
     #[rustfmt::skip]
     let indices = [
-        tl, cr, tr,
-        tr, cr, br,
-        br, cr, bl,
-        bl, cr, tl
+        tr, cr, tl,
+        br, cr, tr,
+        bl, cr, br,
+        tl, cr, bl
     ];
 
     // 12 indices per cell, there are 64 cells per chunk so a total of 768 indices

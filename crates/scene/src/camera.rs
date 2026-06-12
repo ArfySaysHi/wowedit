@@ -50,7 +50,7 @@ impl Camera {
         let view = Mat4::look_to_rh(self.position, direction, Vec3::Y);
 
         // Describes our frustum shape, location of near / far planes and how wide our lens is
-        let proj = Mat4::perspective_rh(std::f32::consts::FRAC_PI_4, aspect_ratio, 0.1, 10000.0);
+        let proj = Mat4::perspective_rh(std::f32::consts::FRAC_PI_4, aspect_ratio, 10.0, 50000.0);
 
         // From right to left, we move the world relative to the camera then squish it into clip space
         proj * view
