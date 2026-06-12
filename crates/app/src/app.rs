@@ -70,6 +70,15 @@ impl App {
             let _ = window.set_cursor_grab(mode);
         }
     }
+
+    fn load_adt(&mut self, name: &str, x: u8, y: u8, loader: &AssetLoader) {
+        let adt = loader.load_adt(name, x, y).unwrap();
+        let terrain = scene::terrain::Terrain::from(adt);
+
+        if let (Some(renderer), Some(wgpu)) = (&mut self.terrain_renderer, &self.wgpu) {
+            renderer.load_terrain(&wgpu.device, &terrain);
+        }
+    }
 }
 
 impl ApplicationHandler for App {
@@ -98,13 +107,10 @@ impl ApplicationHandler for App {
         )
         .unwrap();
         let loader = AssetLoader::new(Box::new(storage), WoWVersion::WotLK);
-        let adt = loader.load_adt("Azeroth", 32, 48).unwrap();
-        let terrain = scene::terrain::Terrain::from(adt);
 
         let terrain_renderer = TerrainRenderer::new(
             &wgpu.device,
             wgpu.surface_config.format,
-            &terrain,
             &gpu_camera.bind_group_layout,
         );
 
@@ -117,6 +123,11 @@ impl ApplicationHandler for App {
         self.terrain_renderer = Some(terrain_renderer);
         self.window = Some(window);
         self.wgpu = Some(wgpu);
+
+        self.load_adt("Azeroth", 32, 48, &loader);
+        self.load_adt("Azeroth", 32, 49, &loader);
+        self.load_adt("Azeroth", 33, 48, &loader);
+        self.load_adt("Azeroth", 33, 49, &loader);
     }
 
     fn device_event(

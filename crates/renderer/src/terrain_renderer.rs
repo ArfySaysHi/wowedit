@@ -1,3 +1,5 @@
+use scene::terrain::Terrain;
+
 use crate::{
     terrain_mesh::{ChunkGpuBuffers, ChunkMesh},
     terrain_pipeline::TerrainPipeline,
@@ -12,21 +14,23 @@ impl TerrainRenderer {
     pub fn new(
         device: &wgpu::Device,
         surface_format: wgpu::TextureFormat,
-        terrain: &scene::terrain::Terrain,
         camera_layout: &wgpu::BindGroupLayout,
     ) -> Self {
         let pipeline = TerrainPipeline::new(device, surface_format, camera_layout);
 
-        let chunks = terrain
-            .chunks
-            .iter()
-            .map(|c| {
-                let mesh = ChunkMesh::from_chunk(c);
-                ChunkGpuBuffers::upload(device, &mesh)
-            })
-            .collect::<Vec<ChunkGpuBuffers>>();
+        Self {
+            pipeline,
+            chunks: Vec::new(),
+        }
+    }
 
-        Self { pipeline, chunks }
+    pub fn load_terrain(&mut self, device: &wgpu::Device, terrain: &Terrain) {
+        let new_chunks = terrain.chunks.iter().map(|c| {
+            let mesh = ChunkMesh::from_chunk(c);
+            ChunkGpuBuffers::upload(device, &mesh)
+        });
+
+        self.chunks.extend(new_chunks);
     }
 
     pub fn draw<'a>(
