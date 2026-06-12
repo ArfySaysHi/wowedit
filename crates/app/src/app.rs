@@ -1,15 +1,15 @@
 use crate::wgpu_state::WgpuState;
 use formats::{loader::AssetLoader, storage::CompoundStorage, version::WoWVersion};
 use glam::Vec3;
-use renderer::{gpu_camera::GpuCamera, terrain_mesh::ChunkMesh, terrain_renderer::TerrainRenderer};
+use renderer::{gpu_camera::GpuCamera, terrain_renderer::TerrainRenderer};
 use scene::camera::Camera;
 use std::sync::Arc;
 use winit::{
     application::ApplicationHandler,
-    event::{ElementState, KeyEvent, WindowEvent},
+    event::{DeviceEvent, KeyEvent, WindowEvent},
     event_loop::ActiveEventLoop,
     keyboard::{KeyCode, PhysicalKey},
-    window::{Window, WindowId},
+    window::{CursorGrabMode, Window, WindowId},
 };
 
 // Owns everything that lasts until the application is closed
@@ -21,6 +21,55 @@ pub struct App {
     depth_texture: Option<wgpu::TextureView>,
     gpu_camera: Option<GpuCamera>,
     camera: Option<Camera>,
+    mouse_locked: Option<bool>, // This is temporary and needs to go
+}
+
+impl App {
+    // Needs massive cleanup once camera code is hidden away somewhere
+    // Probably choose direction by adding key values, normalize then mult by speed
+    // Will also fix the locked into a direction issue
+    fn handle_key(&mut self, event_loop: &ActiveEventLoop, code: KeyCode, is_pressed: bool) {
+        let speed = 10.0;
+        match (code, is_pressed) {
+            (KeyCode::Escape, true) => event_loop.exit(),
+            (KeyCode::KeyW, true) => {
+                if let Some(camera) = &mut self.camera {
+                    camera.process_keyboard(scene::camera::CameraMovement::Forward, speed, 1.0);
+                }
+            }
+            (KeyCode::KeyA, true) => {
+                if let Some(camera) = &mut self.camera {
+                    camera.process_keyboard(scene::camera::CameraMovement::Left, speed, 1.0);
+                }
+            }
+            (KeyCode::KeyS, true) => {
+                if let Some(camera) = &mut self.camera {
+                    camera.process_keyboard(scene::camera::CameraMovement::Backward, speed, 1.0);
+                }
+            }
+            (KeyCode::KeyD, true) => {
+                if let Some(camera) = &mut self.camera {
+                    camera.process_keyboard(scene::camera::CameraMovement::Right, speed, 1.0);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    fn set_cursor_locked(&mut self, locked: bool) {
+        if let Some(window) = &self.window {
+            self.mouse_locked = Some(locked);
+            window.set_cursor_visible(!locked);
+
+            let mode = if locked {
+                CursorGrabMode::Locked
+            } else {
+                CursorGrabMode::None
+            };
+
+            let _ = window.set_cursor_grab(mode);
+        }
+    }
 }
 
 impl ApplicationHandler for App {
@@ -36,13 +85,9 @@ impl ApplicationHandler for App {
         // Load camera
         let terrain_center = Vec3::new(266.0, 250.0, 8800.0);
         let camera = Camera::look_at(
-            terrain_center + Vec3::new(0.0, 3000.0, 200.0), // offset Z slightly
+            terrain_center + Vec3::new(0.0, 1000.0, 200.0),
             terrain_center,
         );
-        println!("camera pos: {:?}", camera.position);
-        println!("camera pitch: {}, yaw: {}", camera.pitch, camera.yaw);
-        let test_vp = camera.build_view_proj(1.0);
-        println!("test view_proj: {:?}", test_vp);
 
         let gpu_camera = GpuCamera::new(&wgpu.device);
 
@@ -56,19 +101,6 @@ impl ApplicationHandler for App {
         let adt = loader.load_adt("Azeroth", 32, 48).unwrap();
         let terrain = scene::terrain::Terrain::from(adt);
 
-        let mesh = ChunkMesh::from_chunk(&terrain.chunks[0]);
-        println!("first vertex: {:?}", mesh.vertices[0].position);
-        println!("last vertex: {:?}", mesh.vertices[144].position);
-
-        for chunk in &terrain.chunks[..4] {
-            let mesh = ChunkMesh::from_chunk(chunk);
-            println!(
-                "Chunk at {:?}, first 3 verts: {:?}",
-                chunk.world_position,
-                &mesh.vertices[0..3]
-            );
-        }
-
         let terrain_renderer = TerrainRenderer::new(
             &wgpu.device,
             wgpu.surface_config.format,
@@ -78,12 +110,40 @@ impl ApplicationHandler for App {
 
         let depth_texture = create_depth_texture(&wgpu.device, &wgpu.surface_config);
 
+        self.mouse_locked = Some(false);
         self.camera = Some(camera);
         self.gpu_camera = Some(gpu_camera);
         self.depth_texture = Some(depth_texture);
         self.terrain_renderer = Some(terrain_renderer);
         self.window = Some(window);
         self.wgpu = Some(wgpu);
+    }
+
+    fn device_event(
+        &mut self,
+        _event_loop: &ActiveEventLoop,
+        _device_id: winit::event::DeviceId,
+        event: DeviceEvent,
+    ) {
+        match event {
+            DeviceEvent::MouseMotion { delta } => {
+                // This logic needs a home -> CameraController or something
+                if let Some(mouse_locked) = self.mouse_locked {
+                    if !mouse_locked {
+                        return;
+                    };
+
+                    let sensitivity = 0.002;
+
+                    if let Some(camera) = &mut self.camera {
+                        camera.process_mouse(delta.0 as f32, delta.1 as f32, sensitivity);
+                    }
+                }
+            }
+
+            DeviceEvent::Removed => println!("Lost mouse focus"),
+            _ => {}
+        }
     }
 
     fn window_event(
@@ -95,15 +155,26 @@ impl ApplicationHandler for App {
         match event {
             WindowEvent::CloseRequested => event_loop.exit(),
 
+            WindowEvent::MouseInput {
+                device_id,
+                state,
+                button,
+            } => {
+                println!("Device ID: {:?}", device_id);
+                println!("Mouse Button: {:?}", button);
+                println!("Element State: {:?}", state);
+                self.set_cursor_locked(state.is_pressed());
+            }
+
             WindowEvent::KeyboardInput {
                 event:
                     KeyEvent {
-                        physical_key: PhysicalKey::Code(KeyCode::Escape),
-                        state: ElementState::Pressed,
+                        physical_key: PhysicalKey::Code(code),
+                        state: key_state,
                         ..
                     },
                 ..
-            } => event_loop.exit(),
+            } => self.handle_key(event_loop, code, key_state.is_pressed()),
 
             WindowEvent::Resized(size) => {
                 if let Some(wgpu) = &mut self.wgpu {
@@ -133,13 +204,6 @@ impl ApplicationHandler for App {
                     &self.gpu_camera,
                     &self.camera,
                 ) {
-                    let vp = camera.build_view_proj(
-                        wgpu.surface_config.width as f32 / wgpu.surface_config.height as f32,
-                    );
-                    let v = glam::Vec4::new(0.0, 236.70442, 8533.334, 1.0);
-                    let clip = vp * v;
-                    println!("clip: {:?}", clip);
-                    println!("ndc: {:?}", clip / clip.w);
                     // Make sure our camera is in position
                     let aspect =
                         wgpu.surface_config.width as f32 / wgpu.surface_config.height as f32;

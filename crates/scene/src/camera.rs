@@ -8,7 +8,18 @@ pub struct Camera {
     pub pitch: f32, // X axis rotation (up/down)
 }
 
+pub enum CameraMovement {
+    Forward,
+    Backward,
+    Left,
+    Right,
+    Up,
+    Down,
+}
+
 impl Camera {
+    pub const SPEED: f32 = 10.0;
+
     pub fn new(position: Vec3) -> Self {
         Self {
             position,
@@ -61,6 +72,34 @@ impl Camera {
             position,
             yaw,
             pitch,
+        }
+    }
+
+    pub fn process_mouse(&mut self, delta_x: f32, delta_y: f32, sensitivity: f32) {
+        self.yaw -= delta_x * sensitivity;
+        self.pitch -= delta_y * sensitivity;
+
+        // Prevent flipping when looking too far up/down
+        let limit = std::f32::consts::FRAC_PI_2 - 0.01;
+        self.pitch = self.pitch.clamp(-limit, limit);
+    }
+
+    pub fn process_keyboard(&mut self, direction: CameraMovement, speed: f32, dt: f32) {
+        let rotation = Quat::from_euler(EulerRot::YXZ, self.yaw, self.pitch, 0.0);
+
+        let forward = rotation * Vec3::NEG_Z;
+        let right = rotation * Vec3::X;
+        let up = Vec3::Y;
+
+        let velocity = speed * dt;
+
+        match direction {
+            CameraMovement::Forward => self.position += forward * velocity,
+            CameraMovement::Backward => self.position -= forward * velocity,
+            CameraMovement::Right => self.position += right * velocity,
+            CameraMovement::Left => self.position -= right * velocity,
+            CameraMovement::Up => self.position += up * velocity,
+            CameraMovement::Down => self.position -= up * velocity,
         }
     }
 }

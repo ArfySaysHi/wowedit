@@ -41,8 +41,7 @@ impl TerrainPipeline {
             }),
             primitive: PrimitiveState {
                 topology: PrimitiveTopology::TriangleList,
-                // cull_mode: Some(Face::Back),
-                cull_mode: None,
+                cull_mode: Some(Face::Front),
                 ..Default::default()
             },
             depth_stencil: Some(DepthStencilState {
