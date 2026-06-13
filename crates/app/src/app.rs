@@ -22,6 +22,9 @@ pub struct App {
     gpu_camera: Option<GpuCamera>,
     camera: Option<Camera>,
     mouse_locked: Option<bool>, // This is temporary and needs to go
+    egui_ctx: egui::Context,
+    egui_winit: Option<egui_winit::State>,
+    egui_renderer: Option<egui_wgpu::Renderer>,
 }
 
 impl App {
@@ -90,6 +93,29 @@ impl ApplicationHandler for App {
         );
 
         let wgpu = pollster::block_on(WgpuState::new(Arc::clone(&window))).unwrap();
+
+        let egui_winit = egui_winit::State::new(
+            self.egui_ctx.clone(),
+            self.egui_ctx.viewport_id(),
+            &window,
+            None,
+            None,
+            None,
+        );
+
+        let egui_renderer = egui_wgpu::Renderer::new(
+            &wgpu.device,
+            wgpu.surface_config.format,
+            egui_wgpu::RendererOptions {
+                msaa_samples: 1,
+                depth_stencil_format: None,
+                dithering: false,
+                predictable_texture_filtering: false,
+            },
+        );
+
+        self.egui_winit = Some(egui_winit);
+        self.egui_renderer = Some(egui_renderer);
 
         // Load camera
         let terrain_center = Vec3::new(266.0, 250.0, 8800.0);
@@ -163,6 +189,13 @@ impl ApplicationHandler for App {
         _window_id: WindowId,
         event: WindowEvent,
     ) {
+        if let (Some(egui_winit), Some(window)) = (&mut self.egui_winit, &self.window) {
+            let response = egui_winit.on_window_event(window, &event);
+            if response.consumed {
+                return;
+            }
+        }
+
         match event {
             WindowEvent::CloseRequested => event_loop.exit(),
 
@@ -221,8 +254,44 @@ impl ApplicationHandler for App {
                     let view_proj = camera.build_view_proj(aspect);
                     gpu_camera.update_camera(&wgpu.queue, &view_proj);
 
+                    // egui frame
+                    if let (Some(egui_winit), Some(window)) = (&mut self.egui_winit, &self.window) {
+                        let raw_input = egui_winit.take_egui_input(window);
+                        self.egui_ctx.begin_pass(raw_input);
+                    }
+
+                    // Draw debug UI
+                    egui::Window::new("Debug").show(&self.egui_ctx, |ui| {
+                        if let Some(camera) = &self.camera {
+                            ui.label(format!(
+                                "pos: ({:.1}, {:.1}, {:.1})",
+                                camera.position.x, camera.position.y, camera.position.z,
+                            ));
+                            ui.label(format!(
+                                "yaw: {:.2}  pitch: {:.2}",
+                                camera.yaw, camera.pitch,
+                            ));
+                        }
+                    });
+
+                    // end egui frame
+                    let egui_output = self.egui_ctx.end_pass();
+
+                    if let (Some(egui_winit), Some(window)) = (&mut self.egui_winit, &self.window) {
+                        egui_winit.handle_platform_output(window, egui_output.platform_output);
+                    }
+
                     // Render the frame
-                    match wgpu.render(terrain_renderer, depth_texture, gpu_camera) {
+                    match wgpu.render(
+                        terrain_renderer,
+                        depth_texture,
+                        gpu_camera,
+                        &self.egui_ctx,
+                        egui_output.textures_delta,
+                        egui_output.shapes,
+                        egui_output.pixels_per_point,
+                        &mut self.egui_renderer,
+                    ) {
                         Ok(_) => {}
                         Err(e) => {
                             log::error!("{e}");

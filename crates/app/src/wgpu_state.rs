@@ -88,6 +88,11 @@ impl WgpuState {
         terrain_renderer: &TerrainRenderer,
         depth_view: &wgpu::TextureView,
         gpu_camera: &GpuCamera,
+        egui_ctx: &egui::Context,
+        textures_delta: egui::TexturesDelta,
+        shapes: Vec<egui::epaint::ClippedShape>,
+        pixels_per_point: f32,
+        egui_renderer: &mut Option<egui_wgpu::Renderer>,
     ) -> Result<()> {
         let output = match self.surface.get_current_texture() {
             wgpu::CurrentSurfaceTexture::Success(surface_texture) => surface_texture,
@@ -120,36 +125,88 @@ impl WgpuState {
             });
 
         {
-            let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("render_pass"),
-                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: &view,
-                    resolve_target: None,
-                    ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r: 0.1,
-                            g: 0.2,
-                            b: 0.3,
-                            a: 1.0,
+            let mut pass = encoder
+                .begin_render_pass(&wgpu::RenderPassDescriptor {
+                    label: Some("render_pass"),
+                    color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                        view: &view,
+                        resolve_target: None,
+                        ops: wgpu::Operations {
+                            load: wgpu::LoadOp::Clear(wgpu::Color {
+                                r: 0.1,
+                                g: 0.2,
+                                b: 0.3,
+                                a: 1.0,
+                            }),
+                            store: wgpu::StoreOp::Store,
+                        },
+                        depth_slice: None,
+                    })],
+                    multiview_mask: None,
+                    depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                        view: depth_view,
+                        depth_ops: Some(wgpu::Operations {
+                            load: wgpu::LoadOp::Clear(1.0),
+                            store: wgpu::StoreOp::Store,
                         }),
-                        store: wgpu::StoreOp::Store,
-                    },
-                    depth_slice: None,
-                })],
-                multiview_mask: None,
-                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
-                    view: depth_view,
-                    depth_ops: Some(wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(1.0),
-                        store: wgpu::StoreOp::Store,
+                        stencil_ops: None,
                     }),
-                    stencil_ops: None,
-                }),
-                timestamp_writes: None,
-                occlusion_query_set: None,
-            });
+                    timestamp_writes: None,
+                    occlusion_query_set: None,
+                })
+                .forget_lifetime();
 
             terrain_renderer.draw(&mut pass, &gpu_camera.bind_group);
+        }
+
+        if let Some(egui_renderer) = egui_renderer {
+            // egui textures and mesh
+            let screen_descriptor = egui_wgpu::ScreenDescriptor {
+                size_in_pixels: [self.surface_config.width, self.surface_config.height],
+                pixels_per_point,
+            };
+
+            for (id, delta) in &textures_delta.set {
+                egui_renderer.update_texture(&self.device, &self.queue, *id, delta);
+            }
+
+            let egui_primitives = egui_ctx.tessellate(shapes, pixels_per_point);
+
+            egui_renderer.update_buffers(
+                &self.device,
+                &self.queue,
+                &mut encoder,
+                &egui_primitives,
+                &screen_descriptor,
+            );
+
+            // egui render pass — no depth attachment
+            {
+                let mut egui_pass = encoder
+                    .begin_render_pass(&wgpu::RenderPassDescriptor {
+                        label: Some("egui_pass"),
+                        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                            view: &view,
+                            resolve_target: None,
+                            ops: wgpu::Operations {
+                                load: wgpu::LoadOp::Load, // don't clear — draw on top
+                                store: wgpu::StoreOp::Store,
+                            },
+                            depth_slice: None,
+                        })],
+                        depth_stencil_attachment: None,
+                        multiview_mask: None,
+                        timestamp_writes: None,
+                        occlusion_query_set: None,
+                    })
+                    .forget_lifetime();
+
+                egui_renderer.render(&mut egui_pass, &egui_primitives, &screen_descriptor);
+            }
+
+            for id in &textures_delta.free {
+                egui_renderer.free_texture(id);
+            }
         }
 
         self.queue.submit(std::iter::once(encoder.finish()));

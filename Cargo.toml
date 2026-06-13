@@ -1,6 +1,6 @@
 [workspace]
 members = ["crates/app", "crates/renderer", "crates/scene", "crates/formats"]
-resolver = "2"
+resolver = "3"
 
 [workspace.dependencies]
 wgpu = "29"
@@ -13,3 +13,6 @@ wow-mpq = "0.6.4"
 pollster = "0.4.0"
 env_logger = "0.11.10"
 log = "0.4.32"
+egui = "0.34.3"
+egui-wgpu = "0.34.3"
+egui-winit = "0.34.3"
