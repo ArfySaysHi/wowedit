@@ -7,9 +7,9 @@ pub struct ChunkHeader {
 
 // A generic reader for all chunked file formats
 impl ChunkHeader {
-    // The identifier for chunks is reversed for... reasons
-    pub fn magic_str(&self) -> &str {
-        std::str::from_utf8(&self.magic).unwrap_or("????")
+    pub fn magic_str(&self) -> String {
+        let reversed = [self.magic[3], self.magic[2], self.magic[1], self.magic[0]];
+        String::from_utf8_lossy(&reversed).into_owned()
     }
 
     pub fn matches(&self, doc_name: &[u8; 4]) -> bool {

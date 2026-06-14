@@ -1,5 +1,12 @@
-use crate::chunks::ChunkHeader;
-use anyhow::{Result, bail};
+use crate::{
+    adt::{
+        mcal::{self, Mcal},
+        mcly::{self, Mcly},
+    },
+    chunks::ChunkHeader,
+    io::{read_f32_at, read_u32_at},
+};
+use anyhow::Result;
 use glam::Vec3;
 use std::io::{Cursor, Read, Seek, SeekFrom};
 
@@ -9,6 +16,7 @@ pub struct Mcnk {
     pub heights: [f32; 145],
     pub area_id: u32,
     pub holes: u32,
+    pub layers: Mcly,
 }
 
 pub fn parse(data: &[u8]) -> Result<Mcnk> {
@@ -20,62 +28,65 @@ pub fn parse(data: &[u8]) -> Result<Mcnk> {
     let pos_y = read_f32_at(&mut r, 108)?;
     let pos_z = read_f32_at(&mut r, 112)?;
 
+    let mut heights: Option<[f32; 145]> = None;
+    let mut layers: Option<Mcly> = None;
+    let mut raw_mcal: Option<Vec<u8>> = None;
+
+    // Subchunks begin after the 128-byte MCNK header
     r.seek(SeekFrom::Start(128))?;
-    let heights = read_mcvt(&mut r)?;
+
+    let end = data.len() as u64;
+
+    while r.position() < end {
+        let header = ChunkHeader::read(&mut r)?;
+        let next = r.position() + header.size as u64;
+
+        match &header.magic {
+            b"TVCM" => {
+                let mut buf = [0f32; 145];
+                for h in buf.iter_mut() {
+                    let mut bytes = [0u8; 4];
+                    r.read_exact(&mut bytes)?;
+                    *h = f32::from_le_bytes(bytes);
+                }
+                heights = Some(buf);
+            }
+            b"YLCM" => {
+                let mut buffer = vec![0u8; header.size as usize];
+                r.read_exact(&mut buffer)?;
+                layers = Some(mcly::parse(&buffer)?);
+            }
+            b"RNCM" => {
+                // junk bytes messing with cursor alignment
+                r.seek(SeekFrom::Start(next + 13))?;
+                continue;
+            }
+            b"LACM" => {
+                let mut buf = vec![0u8; header.size as usize];
+                r.read_exact(&mut buf)?;
+                raw_mcal = Some(buf);
+            }
+            _ => {
+                #[cfg(debug_assertions)]
+                println!("unknown chunk: {:?}", str::from_utf8(&header.magic));
+            }
+        }
+
+        r.seek(SeekFrom::Start(next))?;
+    }
+
+    let layers = layers.ok_or_else(|| anyhow::anyhow!("missing MCLY"))?;
+    let _mcal = if let Some(raw) = raw_mcal {
+        mcal::parse(&raw, &layers)?
+    } else {
+        Mcal::default() // chunks with only a base layer may have no MCAL
+    };
 
     Ok(Mcnk {
         position: Vec3::new(pos_x, pos_y, pos_z),
-        heights,
+        heights: heights.ok_or_else(|| anyhow::anyhow!("MCNK missing MCVT subchunk"))?,
         area_id,
         holes,
+        layers,
     })
-}
-
-/// MCVT contains terrain heights
-///
-/// There are 145 values arranged as:
-/// - 81 outer vertices
-/// - 64 inner vertices
-/// - 145 total vertices
-///
-/// There are 9 outer vertices and 8 inner vertices on each "row":
-///     O O O O O O O O O I I I I I I I I
-///
-fn read_mcvt(r: &mut Cursor<&[u8]>) -> Result<[f32; 145]> {
-    loop {
-        let header = match ChunkHeader::read(r) {
-            Ok(h) => h,
-            Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => {
-                bail!("MCVT subchunk not found in MCNK")
-            }
-            Err(e) => return Err(e.into()),
-        };
-
-        if header.matches(b"MCVT") {
-            let mut heights = [0f32; 145];
-            for h in heights.iter_mut() {
-                let mut buf = [0u8; 4];
-                r.read_exact(&mut buf)?;
-                *h = f32::from_le_bytes(buf);
-            }
-            return Ok(heights);
-        }
-
-        let pos = r.stream_position()?;
-        r.seek(SeekFrom::Start(pos + header.size as u64))?;
-    }
-}
-
-fn read_u32_at(r: &mut Cursor<&[u8]>, offset: u64) -> Result<u32> {
-    r.seek(SeekFrom::Start(offset))?;
-    let mut buf = [0u8; 4];
-    r.read_exact(&mut buf)?;
-    Ok(u32::from_le_bytes(buf))
-}
-
-fn read_f32_at(r: &mut Cursor<&[u8]>, offset: u64) -> Result<f32> {
-    r.seek(SeekFrom::Start(offset))?;
-    let mut buf = [0u8; 4];
-    r.read_exact(&mut buf)?;
-    Ok(f32::from_le_bytes(buf))
 }

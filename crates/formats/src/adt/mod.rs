@@ -1,5 +1,7 @@
+mod mcal;
+mod mcly;
 mod mcnk;
-mod mhdr;
+mod mtex;
 
 use crate::chunks::ChunkHeader;
 use anyhow::{Result, bail};
@@ -9,11 +11,13 @@ pub use mcnk::Mcnk;
 
 pub struct Adt {
     pub chunks: Vec<Mcnk>,
+    pub texture_paths: Vec<String>,
 }
 
 pub fn parse(data: &[u8]) -> Result<Adt> {
     let mut r = Cursor::new(data);
     let mut chunks = Vec::with_capacity(256);
+    let mut texture_paths = Vec::new();
 
     loop {
         let header = match ChunkHeader::read(&mut r) {
@@ -32,7 +36,15 @@ pub fn parse(data: &[u8]) -> Result<Adt> {
                 chunks.push(mcnk::parse(&chunk_data)?);
                 continue;
             }
-            _ => { /* unknown chunk skip */ }
+            b"XETM" => {
+                let chunk_data = read_chunk_data(&mut r, header.size)?;
+                texture_paths = mtex::parse(&chunk_data)?.filenames;
+                continue;
+            }
+            _ => {
+                /* unknown chunk skip */
+                println!("{:?}", str::from_utf8(&header.magic))
+            }
         }
 
         r.seek(SeekFrom::Start(start + header.size as u64))?;
@@ -42,7 +54,10 @@ pub fn parse(data: &[u8]) -> Result<Adt> {
         bail!("expected 256 MCNK chunks, got {}", chunks.len());
     }
 
-    Ok(Adt { chunks })
+    Ok(Adt {
+        chunks,
+        texture_paths,
+    })
 }
 
 fn read_chunk_data(r: &mut Cursor<&[u8]>, size: u32) -> Result<Vec<u8>> {

@@ -151,9 +151,6 @@ impl ApplicationHandler for App {
         self.wgpu = Some(wgpu);
 
         self.load_adt("Azeroth", 32, 48, &loader);
-        self.load_adt("Azeroth", 32, 49, &loader);
-        self.load_adt("Azeroth", 33, 48, &loader);
-        self.load_adt("Azeroth", 33, 49, &loader);
     }
 
     fn device_event(

@@ -15,6 +15,11 @@ impl AssetLoader {
         Self { storage, version }
     }
 
+    pub fn load_blp(&self, path: &str) -> Result<crate::blp::BlpImage> {
+        let data = self.storage.read_to_end(path)?;
+        crate::blp::parse(&data)
+    }
+
     pub fn load_adt(&self, map_name: &str, x: u8, y: u8) -> Result<Adt> {
         let path = format!("world/maps/{map_name}/{map_name}_{x}_{y}.adt");
         let data = self.storage.read_to_end(&path)?;
