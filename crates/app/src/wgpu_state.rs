@@ -1,6 +1,7 @@
 use anyhow::Result;
 use renderer::{
-    gpu_camera::GpuCamera, terrain_renderer::TerrainRenderer, terrain_textures::TerrainTextures,
+    gpu_camera::GpuCamera, terrain::terrain_renderer::TerrainRenderer,
+    terrain::terrain_textures::TerrainTextures,
 };
 use std::sync::Arc;
 use winit::window::Window;

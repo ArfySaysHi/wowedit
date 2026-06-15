@@ -2,7 +2,8 @@ use crate::wgpu_state::WgpuState;
 use formats::{loader::AssetLoader, storage::CompoundStorage, version::WoWVersion};
 use glam::Vec3;
 use renderer::{
-    gpu_camera::GpuCamera, terrain_renderer::TerrainRenderer, terrain_textures::TerrainTextures,
+    gpu_camera::GpuCamera, terrain::terrain_renderer::TerrainRenderer,
+    terrain::terrain_textures::TerrainTextures,
 };
 use scene::camera::Camera;
 use std::sync::Arc;

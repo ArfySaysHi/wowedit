@@ -14,7 +14,7 @@ impl TerrainPipeline {
         texture_layout: &BindGroupLayout,
         alpha_layout: &BindGroupLayout,
     ) -> Self {
-        let shader = device.create_shader_module(include_wgsl!("shaders/terrain.wgsl"));
+        let shader = device.create_shader_module(include_wgsl!("../shaders/terrain.wgsl"));
 
         let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
             label: Some("terrain_layout"),

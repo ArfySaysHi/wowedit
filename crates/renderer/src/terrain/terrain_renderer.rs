@@ -1,6 +1,6 @@
 use scene::terrain::Terrain;
 
-use crate::{
+use crate::terrain::{
     terrain_alpha::ChunkAlphaMaps,
     terrain_mesh::{ChunkGpuBuffers, ChunkMesh},
     terrain_pipeline::TerrainPipeline,
