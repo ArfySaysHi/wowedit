@@ -3,7 +3,6 @@ use anyhow::{Result, bail};
 
 const ALPHA_MAP_SIZE: usize = 64 * 64;
 
-#[allow(dead_code)]
 #[derive(Debug, Default)]
 pub struct Mcal {
     /// One alpha map per layer after the base, in layer order.

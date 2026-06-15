@@ -1,7 +1,9 @@
 use crate::wgpu_state::WgpuState;
 use formats::{loader::AssetLoader, storage::CompoundStorage, version::WoWVersion};
 use glam::Vec3;
-use renderer::{gpu_camera::GpuCamera, terrain_renderer::TerrainRenderer};
+use renderer::{
+    gpu_camera::GpuCamera, terrain_renderer::TerrainRenderer, terrain_textures::TerrainTextures,
+};
 use scene::camera::Camera;
 use std::sync::Arc;
 use winit::{
@@ -18,6 +20,7 @@ pub struct App {
     window: Option<Arc<Window>>,
     wgpu: Option<WgpuState>,
     terrain_renderer: Option<TerrainRenderer>,
+    terrain_textures: Option<TerrainTextures>,
     depth_texture: Option<wgpu::TextureView>,
     gpu_camera: Option<GpuCamera>,
     camera: Option<Camera>,
@@ -73,15 +76,6 @@ impl App {
             let _ = window.set_cursor_grab(mode);
         }
     }
-
-    fn load_adt(&mut self, name: &str, x: u8, y: u8, loader: &AssetLoader) {
-        let adt = loader.load_adt(name, x, y).unwrap();
-        let terrain = scene::terrain::Terrain::from(adt);
-
-        if let (Some(renderer), Some(wgpu)) = (&mut self.terrain_renderer, &self.wgpu) {
-            renderer.load_terrain(&wgpu.device, &terrain);
-        }
-    }
 }
 
 impl ApplicationHandler for App {
@@ -133,24 +127,33 @@ impl ApplicationHandler for App {
         )
         .unwrap();
         let loader = AssetLoader::new(Box::new(storage), WoWVersion::WotLK);
+        let depth_texture = create_depth_texture(&wgpu.device, &wgpu.surface_config);
+
+        let adt = loader.load_adt("Azeroth", 32, 48).unwrap();
+
+        let textures = loader.load_adt_textures(&adt).unwrap();
+        let terrain_textures = TerrainTextures::new(&wgpu.device, &wgpu.queue, &textures);
 
         let terrain_renderer = TerrainRenderer::new(
             &wgpu.device,
             wgpu.surface_config.format,
             &gpu_camera.bind_group_layout,
+            &terrain_textures.bind_group_layout,
         );
-
-        let depth_texture = create_depth_texture(&wgpu.device, &wgpu.surface_config);
 
         self.mouse_locked = Some(false);
         self.camera = Some(camera);
-        self.gpu_camera = Some(gpu_camera);
         self.depth_texture = Some(depth_texture);
-        self.terrain_renderer = Some(terrain_renderer);
         self.window = Some(window);
+        self.terrain_renderer = Some(terrain_renderer);
+        self.terrain_textures = Some(terrain_textures);
         self.wgpu = Some(wgpu);
+        self.gpu_camera = Some(gpu_camera);
 
-        self.load_adt("Azeroth", 32, 48, &loader);
+        let terrain = scene::terrain::Terrain::from(adt);
+        if let (Some(renderer), Some(wgpu)) = (&mut self.terrain_renderer, &self.wgpu) {
+            renderer.load_terrain(&wgpu.device, &wgpu.queue, &terrain);
+        }
     }
 
     fn device_event(
@@ -235,12 +238,14 @@ impl ApplicationHandler for App {
                 if let (
                     Some(wgpu),
                     Some(terrain_renderer),
+                    Some(terrain_textures),
                     Some(depth_texture),
                     Some(gpu_camera),
                     Some(camera),
                 ) = (
                     &mut self.wgpu,
                     &self.terrain_renderer,
+                    &self.terrain_textures,
                     &self.depth_texture,
                     &self.gpu_camera,
                     &self.camera,
@@ -288,6 +293,7 @@ impl ApplicationHandler for App {
                         egui_output.shapes,
                         egui_output.pixels_per_point,
                         &mut self.egui_renderer,
+                        terrain_textures,
                     ) {
                         Ok(_) => {}
                         Err(e) => {

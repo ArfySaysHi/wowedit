@@ -1,5 +1,7 @@
 use anyhow::Result;
-use renderer::{gpu_camera::GpuCamera, terrain_renderer::TerrainRenderer};
+use renderer::{
+    gpu_camera::GpuCamera, terrain_renderer::TerrainRenderer, terrain_textures::TerrainTextures,
+};
 use std::sync::Arc;
 use winit::window::Window;
 
@@ -93,6 +95,7 @@ impl WgpuState {
         shapes: Vec<egui::epaint::ClippedShape>,
         pixels_per_point: f32,
         egui_renderer: &mut Option<egui_wgpu::Renderer>,
+        terrain_textures: &TerrainTextures,
     ) -> Result<()> {
         let output = match self.surface.get_current_texture() {
             wgpu::CurrentSurfaceTexture::Success(surface_texture) => surface_texture,
@@ -156,7 +159,11 @@ impl WgpuState {
                 })
                 .forget_lifetime();
 
-            terrain_renderer.draw(&mut pass, &gpu_camera.bind_group);
+            terrain_renderer.draw(
+                &mut pass,
+                &gpu_camera.bind_group,
+                &terrain_textures.bind_group,
+            );
         }
 
         if let Some(egui_renderer) = egui_renderer {

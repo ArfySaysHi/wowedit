@@ -28,6 +28,11 @@ impl ChunkMesh {
                     origin.y + chunk.heights[idx],
                     origin.z + offset_y,
                 ],
+                uv: [
+                    (origin.x + offset_x) / CELL_SIZE,
+                    (origin.z + offset_y) / CELL_SIZE,
+                ],
+                chunk_uv: [offset_x / CHUNK_SIZE, offset_y / CHUNK_SIZE],
             });
         }
 

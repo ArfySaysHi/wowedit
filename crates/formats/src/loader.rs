@@ -1,5 +1,8 @@
+use std::collections::HashMap;
+
 use crate::{
     adt::{self, Adt},
+    blp::BlpImage,
     storage::Storage,
     version::WoWVersion,
 };
@@ -13,6 +16,26 @@ pub struct AssetLoader {
 impl AssetLoader {
     pub fn new(storage: Box<dyn Storage>, version: WoWVersion) -> Self {
         Self { storage, version }
+    }
+
+    pub fn load_adt_textures(&self, adt: &Adt) -> Result<HashMap<u32, BlpImage>> {
+        let mut textures: HashMap<u32, BlpImage> = HashMap::new();
+
+        for (index, path) in adt.texture_paths.iter().enumerate() {
+            let normalized = path.replace('\\', "/");
+
+            match self.storage.read_to_end(&normalized) {
+                Ok(data) => match crate::blp::parse(&data) {
+                    Ok(image) => {
+                        textures.insert(index as u32, image);
+                    }
+                    Err(e) => log::warn!("Failed to decode BLP {normalized}: {e}"),
+                },
+                Err(e) => log::warn!("Failed to load texture {normalized}: {e}"),
+            }
+        }
+
+        Ok(textures)
     }
 
     pub fn load_blp(&self, path: &str) -> Result<crate::blp::BlpImage> {

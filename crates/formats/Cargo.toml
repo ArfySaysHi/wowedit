@@ -8,3 +8,4 @@ anyhow = { workspace = true }
 glam = { workspace = true }
 wow-mpq = { workspace = true }
 wow-blp = { workspace = true }
+log = { workspace = true }

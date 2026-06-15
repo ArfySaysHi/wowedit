@@ -17,6 +17,7 @@ pub struct Mcnk {
     pub area_id: u32,
     pub holes: u32,
     pub layers: Mcly,
+    pub mcal: Mcal,
 }
 
 pub fn parse(data: &[u8]) -> Result<Mcnk> {
@@ -66,17 +67,14 @@ pub fn parse(data: &[u8]) -> Result<Mcnk> {
                 r.read_exact(&mut buf)?;
                 raw_mcal = Some(buf);
             }
-            _ => {
-                #[cfg(debug_assertions)]
-                println!("unknown chunk: {:?}", str::from_utf8(&header.magic));
-            }
+            _ => {}
         }
 
         r.seek(SeekFrom::Start(next))?;
     }
 
     let layers = layers.ok_or_else(|| anyhow::anyhow!("missing MCLY"))?;
-    let _mcal = if let Some(raw) = raw_mcal {
+    let mcal = if let Some(raw) = raw_mcal {
         mcal::parse(&raw, &layers)?
     } else {
         Mcal::default() // chunks with only a base layer may have no MCAL
@@ -88,5 +86,6 @@ pub fn parse(data: &[u8]) -> Result<Mcnk> {
         area_id,
         holes,
         layers,
+        mcal,
     })
 }

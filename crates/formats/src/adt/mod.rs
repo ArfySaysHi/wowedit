@@ -1,7 +1,7 @@
-mod mcal;
-mod mcly;
-mod mcnk;
-mod mtex;
+pub mod mcal;
+pub mod mcly;
+pub mod mcnk;
+pub mod mtex;
 
 use crate::chunks::ChunkHeader;
 use anyhow::{Result, bail};
@@ -41,10 +41,7 @@ pub fn parse(data: &[u8]) -> Result<Adt> {
                 texture_paths = mtex::parse(&chunk_data)?.filenames;
                 continue;
             }
-            _ => {
-                /* unknown chunk skip */
-                println!("{:?}", str::from_utf8(&header.magic))
-            }
+            _ => { /* unknown chunk skip */ }
         }
 
         r.seek(SeekFrom::Start(start + header.size as u64))?;

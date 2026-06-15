@@ -1,3 +1,4 @@
+use formats::adt::{mcal::Mcal, mcly::Mcly};
 use glam::Vec3;
 
 pub struct Terrain {
@@ -23,6 +24,8 @@ pub struct Terrain {
 pub struct TerrainChunk {
     pub world_position: Vec3,
     pub heights: [f32; 145],
+    pub mcal: Mcal,
+    pub layers: Mcly,
 }
 
 impl From<formats::adt::Adt> for Terrain {
@@ -45,6 +48,8 @@ impl From<formats::adt::Mcnk> for TerrainChunk {
         Self {
             world_position: wow_to_engine(mcnk.position),
             heights: mcnk.heights,
+            mcal: mcnk.mcal,
+            layers: mcnk.layers,
         }
     }
 }

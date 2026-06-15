@@ -11,12 +11,18 @@ impl TerrainPipeline {
         device: &Device,
         surface_format: TextureFormat,
         camera_layout: &BindGroupLayout,
+        texture_layout: &BindGroupLayout,
+        alpha_layout: &BindGroupLayout,
     ) -> Self {
         let shader = device.create_shader_module(include_wgsl!("shaders/terrain.wgsl"));
 
         let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
             label: Some("terrain_layout"),
-            bind_group_layouts: &[Some(camera_layout)],
+            bind_group_layouts: &[
+                Some(camera_layout),
+                Some(texture_layout),
+                Some(alpha_layout),
+            ],
             immediate_size: 0,
         });
 
@@ -41,8 +47,7 @@ impl TerrainPipeline {
             }),
             primitive: PrimitiveState {
                 topology: PrimitiveTopology::TriangleList,
-                // cull_mode: Some(Face::Back),
-                cull_mode: None,
+                cull_mode: Some(Face::Front),
                 ..Default::default()
             },
             depth_stencil: Some(DepthStencilState {

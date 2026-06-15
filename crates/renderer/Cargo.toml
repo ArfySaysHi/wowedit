@@ -8,3 +8,5 @@ wgpu = { workspace = true }
 glam = { workspace = true }
 bytemuck = { workspace = true }
 scene = { path = "../scene" }
+formats = { path = "../formats" }
+pollster = { workspace = true }
