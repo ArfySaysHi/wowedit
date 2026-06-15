@@ -25,7 +25,7 @@ impl AssetLoader {
             let normalized = path.replace('\\', "/");
 
             match self.storage.read_to_end(&normalized) {
-                Ok(data) => match crate::blp::parse(&data) {
+                Ok(data) => match crate::blp::decode(&data) {
                     Ok(image) => {
                         textures.insert(index as u32, image);
                     }
@@ -36,11 +36,6 @@ impl AssetLoader {
         }
 
         Ok(textures)
-    }
-
-    pub fn load_blp(&self, path: &str) -> Result<crate::blp::BlpImage> {
-        let data = self.storage.read_to_end(path)?;
-        crate::blp::parse(&data)
     }
 
     pub fn load_adt(&self, map_name: &str, x: u8, y: u8) -> Result<Adt> {

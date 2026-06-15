@@ -12,10 +12,6 @@ impl ChunkHeader {
         String::from_utf8_lossy(&reversed).into_owned()
     }
 
-    pub fn matches(&self, doc_name: &[u8; 4]) -> bool {
-        self.magic == [doc_name[3], doc_name[2], doc_name[1], doc_name[0]]
-    }
-
     pub fn read(r: &mut impl Read) -> io::Result<Self> {
         let mut magic = [0u8; 4];
         r.read_exact(&mut magic)?;

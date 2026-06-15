@@ -32,12 +32,14 @@ pub fn parse(data: &[u8]) -> Result<Adt> {
             b"REVM" => { /* MVER skip */ }
             b"RDHM" => { /* MHDR skip */ }
             b"KNCM" => {
-                let chunk_data = read_chunk_data(&mut r, header.size)?;
+                let mut chunk_data = vec![0u8; header.size as usize];
+                r.read_exact(&mut chunk_data)?;
                 chunks.push(mcnk::parse(&chunk_data)?);
                 continue;
             }
             b"XETM" => {
-                let chunk_data = read_chunk_data(&mut r, header.size)?;
+                let mut chunk_data = vec![0u8; header.size as usize];
+                r.read_exact(&mut chunk_data)?;
                 texture_paths = mtex::parse(&chunk_data)?.filenames;
                 continue;
             }
@@ -55,10 +57,4 @@ pub fn parse(data: &[u8]) -> Result<Adt> {
         chunks,
         texture_paths,
     })
-}
-
-fn read_chunk_data(r: &mut Cursor<&[u8]>, size: u32) -> Result<Vec<u8>> {
-    let mut buf = vec![0u8; size as usize];
-    r.read_exact(&mut buf)?;
-    Ok(buf)
 }

@@ -50,8 +50,8 @@ pub fn parse(data: &[u8], layers: &Mcly) -> Result<Mcal> {
 /// RLE decompression for MCAL compressed alpha maps.
 ///
 /// Each byte is a control byte:
-/// - High bit set (0x80)  → fill mode:  repeat the next byte for (count) iterations
-/// - High bit clear       → copy mode:  copy the next (count) bytes literally
+/// - High bit set (0x80)  -> fill mode:  repeat the next byte for (count) iterations
+/// - High bit clear       -> copy mode:  copy the next (count) bytes literally
 fn decompress(data: &[u8], output_size: usize) -> Result<[u8; ALPHA_MAP_SIZE]> {
     let mut out = [0u8; ALPHA_MAP_SIZE];
     let mut i = 0; // read position in data

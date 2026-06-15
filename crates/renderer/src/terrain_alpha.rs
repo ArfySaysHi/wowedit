@@ -1,9 +1,15 @@
 use formats::adt::mcly::Mcly;
 
+/// The GPU upload for alphamaps
 pub struct ChunkAlphaMaps {
     pub bind_group: wgpu::BindGroup,
+
+    // Stops the buffer being dropped early (bind_group holds an
+    // internal reference but it's a little fragile, don't want it biting me later)
+    _material_buffer: wgpu::Buffer,
 }
 
+/// CPU-side data definition
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 struct ChunkMaterial {
@@ -93,8 +99,8 @@ impl ChunkAlphaMaps {
 
         let chunk_material = ChunkMaterial {
             layer_count: alpha_maps.len() as u32 + 1,
-            texture_ids,
             _pad: [0; 3],
+            texture_ids,
         };
         queue.write_buffer(&chunk_mat_buffer, 0, bytemuck::bytes_of(&chunk_material));
 
@@ -117,6 +123,9 @@ impl ChunkAlphaMaps {
             ],
         });
 
-        Self { bind_group }
+        Self {
+            bind_group,
+            _material_buffer: chunk_mat_buffer,
+        }
     }
 }

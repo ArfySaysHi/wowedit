@@ -36,9 +36,9 @@ impl From<formats::adt::Adt> for Terrain {
     }
 }
 
-// In WGPU, x is east / -west and y is up / -down while z is north / -south
-// This is because WGPU makes sense. WoW being a snowflake decides to do:
-// y as -east / west and z as up / -down while x is -north / south
+/// In WGPU, x is east / -west and y is up / -down while z is north / -south
+/// This is because WGPU makes sense. WoW being a snowflake decides to do:
+/// y as -east / west and z as up / -down while x is -north / south
 fn wow_to_engine(v: Vec3) -> Vec3 {
     Vec3::new(-v.y, v.z, -v.x)
 }

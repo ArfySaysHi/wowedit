@@ -58,7 +58,8 @@ pub fn parse(data: &[u8]) -> Result<Mcnk> {
                 layers = Some(mcly::parse(&buffer)?);
             }
             b"RNCM" => {
-                // junk bytes messing with cursor alignment
+                // junk bytes messing with cursor alignment, they are seemingly in all WotLK MCNR
+                // chunks and are the same each time. I have no idea why they exist.
                 r.seek(SeekFrom::Start(next + 13))?;
                 continue;
             }
