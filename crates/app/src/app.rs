@@ -2,8 +2,11 @@ use crate::wgpu_state::WgpuState;
 use formats::{loader::AssetLoader, storage::CompoundStorage, version::WoWVersion};
 use glam::Vec3;
 use renderer::{
-    gpu_camera::GpuCamera, terrain::terrain_renderer::TerrainRenderer,
-    terrain::terrain_textures::TerrainTextures,
+    gpu_camera::GpuCamera,
+    terrain::{
+        terrain_mipmap::TerrainMipmapGenerator, terrain_renderer::TerrainRenderer,
+        terrain_textures::TerrainTextures,
+    },
 };
 use scene::camera::Camera;
 use std::sync::Arc;
@@ -132,8 +135,11 @@ impl ApplicationHandler for App {
 
         let adt = loader.load_adt("Azeroth", 32, 48).unwrap();
 
+        let mipmap_generator = TerrainMipmapGenerator::new(&wgpu.device);
+
         let textures = loader.load_adt_textures(&adt).unwrap();
-        let terrain_textures = TerrainTextures::new(&wgpu.device, &wgpu.queue, &textures);
+        let terrain_textures =
+            TerrainTextures::new(&wgpu.device, &wgpu.queue, &textures, &mipmap_generator);
 
         let terrain_renderer = TerrainRenderer::new(
             &wgpu.device,

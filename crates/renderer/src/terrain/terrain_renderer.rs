@@ -1,10 +1,9 @@
-use scene::terrain::Terrain;
-
 use crate::terrain::{
     terrain_alpha::ChunkAlphaMaps,
     terrain_mesh::{ChunkGpuBuffers, ChunkMesh},
     terrain_pipeline::TerrainPipeline,
 };
+use scene::terrain::Terrain;
 
 pub struct TerrainRenderer {
     pipeline: TerrainPipeline,
