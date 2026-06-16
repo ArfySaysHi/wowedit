@@ -44,7 +44,8 @@ impl ChunkAlphaMaps {
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::R8Unorm, // single channel
+            // Only uses R but this means it can go through the mipmap compute shader pipeline alongside the diffuse texture
+            format: wgpu::TextureFormat::Rgba8Unorm,
             usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
             view_formats: &[],
         });
@@ -57,6 +58,15 @@ impl ChunkAlphaMaps {
         });
 
         for (index, map) in alpha_maps.iter().enumerate() {
+            // 1. Expand R -> RGBA
+            // The input 'map' is [u8; 4096] (R only). We need [u8; 16384] (RGBA).
+            let mut rgba_data = Vec::with_capacity(4096 * 4);
+            for &alpha in map.iter() {
+                // Replicate the alpha value into R, G, B, A channels
+                // This allows the mipmap shader to treat it exactly like a color texture
+                rgba_data.extend_from_slice(&[alpha, alpha, alpha, alpha]);
+            }
+
             queue.write_texture(
                 wgpu::TexelCopyTextureInfo {
                     texture: &texture_array,
@@ -68,10 +78,10 @@ impl ChunkAlphaMaps {
                     },
                     aspect: wgpu::TextureAspect::All,
                 },
-                map,
+                &rgba_data, // 2. Pass the expanded buffer
                 wgpu::TexelCopyBufferLayout {
                     offset: 0,
-                    bytes_per_row: Some(64),
+                    bytes_per_row: Some(64 * 4), // 4 bytes per pixel now
                     rows_per_image: Some(64),
                 },
                 layer_size,
