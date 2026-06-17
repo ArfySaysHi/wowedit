@@ -1,6 +1,6 @@
 use crate::io::{read_f32, read_u32};
 use anyhow::Result;
-use glam::{Mat4, Quat, Vec3};
+use glam::{Mat4, Vec3};
 use std::io::{Cursor, Read};
 
 #[derive(Debug, Clone)]
@@ -46,24 +46,20 @@ pub fn parse(data: &[u8]) -> Result<Vec<MddfEntry>> {
 }
 
 pub fn mddf_to_model_matrix(entry: &MddfEntry) -> Mat4 {
-    println!("wow pos: {:?}", entry.position);
     let scale = entry.scale as f32 / 1024.0;
+    let tile_size: f32 = 533.333_3;
 
-    // WoW stores rotation in degrees, convert to radians
-    // WoW rotation order is ZXY (applied Z first, then X, then Y)
+    let pos_z = 32.0 * tile_size - entry.position[0];
+    let pos_y = entry.position[1];
+    let pos_x = 32.0 * tile_size - entry.position[2];
+
+    let pos = Vec3::new(-pos_z, pos_y, -pos_x);
+
     let rot_x = entry.rotation[0].to_radians();
-    let rot_y = entry.rotation[1].to_radians();
-    let rot_z = entry.rotation[2].to_radians();
+    let rot_y = (entry.rotation[1]).to_radians();
+    let rot_z = (-entry.rotation[2]).to_radians();
 
-    let pos = Vec3::new(
-        -entry.position[2], // engine X = -wow Z (east-west)
-        entry.position[1],  // engine Y = wow Y (height)
-        -entry.position[0], // engine Z = -wow X (north-south)
-    );
-
-    Mat4::from_scale_rotation_translation(
-        Vec3::splat(scale),
-        Quat::from_euler(glam::EulerRot::ZXY, rot_z, rot_x, rot_y),
-        pos,
-    )
+    Mat4::from_translation(pos)
+        * Mat4::from_euler(glam::EulerRot::YZX, rot_y, rot_z, rot_x)
+        * Mat4::from_scale(Vec3::splat(scale))
 }

@@ -121,9 +121,9 @@ impl ApplicationHandler for App {
         self.egui_renderer = Some(egui_renderer);
 
         // Load camera
-        let terrain_center = Vec3::new(8533.328, 236.0, 8533.334);
+        let terrain_center = Vec3::new(0.0, 236.0, 8533.334);
         let camera = Camera::look_at(
-            terrain_center + Vec3::new(0.0, 1000.0, 200.0),
+            terrain_center + Vec3::new(0.0, 100.0, 200.0),
             terrain_center,
         );
 
@@ -171,6 +171,8 @@ impl ApplicationHandler for App {
                 .push(mddf_to_model_matrix(entry));
         }
 
+        println!("grouped: {:#?}", grouped);
+
         for path in doodad_filenames.into_iter() {
             m2_models.push(loader.load_m2(&path).unwrap());
         }
@@ -180,9 +182,6 @@ impl ApplicationHandler for App {
             wgpu.surface_config.format,
             &gpu_camera.bind_group_layout,
         );
-
-        println!("tile {}, {}", adt.tile_x, adt.tile_y);
-        println!("mcnk {:?}", adt.chunks.first().unwrap().position);
 
         self.mouse_locked = Some(false);
         self.camera = Some(camera);
