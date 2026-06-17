@@ -1166,6 +1166,7 @@ name = "formats"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bytemuck",
  "glam",
  "log",
  "wow-blp",

@@ -1,15 +1,19 @@
 use crate::wgpu_state::WgpuState;
-use formats::{loader::AssetLoader, storage::CompoundStorage, version::WoWVersion};
-use glam::Vec3;
+use formats::{
+    adt::mddf::mddf_to_model_matrix, loader::AssetLoader, m2::m2_model::M2Model,
+    storage::CompoundStorage, version::WoWVersion,
+};
+use glam::{Mat4, Vec3};
 use renderer::{
     gpu_camera::GpuCamera,
+    m2::m2_renderer::M2Renderer,
     terrain::{
         terrain_mipmap::TerrainMipmapGenerator, terrain_renderer::TerrainRenderer,
         terrain_textures::TerrainTextures,
     },
 };
 use scene::camera::Camera;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 use winit::{
     application::ApplicationHandler,
     event::{DeviceEvent, KeyEvent, WindowEvent},
@@ -25,6 +29,7 @@ pub struct App {
     wgpu: Option<WgpuState>,
     terrain_renderer: Option<TerrainRenderer>,
     terrain_textures: Option<TerrainTextures>,
+    m2_renderer: Option<M2Renderer>,
     depth_texture: Option<wgpu::TextureView>,
     gpu_camera: Option<GpuCamera>,
     camera: Option<Camera>,
@@ -116,7 +121,7 @@ impl ApplicationHandler for App {
         self.egui_renderer = Some(egui_renderer);
 
         // Load camera
-        let terrain_center = Vec3::new(266.0, 250.0, 8800.0);
+        let terrain_center = Vec3::new(8533.328, 236.0, 8533.334);
         let camera = Camera::look_at(
             terrain_center + Vec3::new(0.0, 1000.0, 200.0),
             terrain_center,
@@ -124,43 +129,85 @@ impl ApplicationHandler for App {
 
         let gpu_camera = GpuCamera::new(&wgpu.device);
 
-        // Load terrain
         let storage = CompoundStorage::from_wow_install(
             "/home/arfy/Games/acwow/ChromieCraft_3.3.5a/Data",
             "enUS",
         )
         .unwrap();
         let loader = AssetLoader::new(Box::new(storage), WoWVersion::WotLK);
-        let depth_texture = create_depth_texture(&wgpu.device, &wgpu.surface_config);
 
+        // Northshire abbey - Azeroth | 32 | 48
         let adt = loader.load_adt("Azeroth", 32, 48).unwrap();
 
+        // Load terrain
+        let depth_texture = create_depth_texture(&wgpu.device, &wgpu.surface_config);
         let mipmap_generator = TerrainMipmapGenerator::new(&wgpu.device);
 
         let textures = loader.load_adt_textures(&adt).unwrap();
         let terrain_textures =
             TerrainTextures::new(&wgpu.device, &wgpu.queue, &textures, &mipmap_generator);
 
-        let terrain_renderer = TerrainRenderer::new(
+        let mut terrain_renderer = TerrainRenderer::new(
             &wgpu.device,
             wgpu.surface_config.format,
             &gpu_camera.bind_group_layout,
             &terrain_textures.bind_group_layout,
         );
 
+        // Load m2 test
+        let doodad_filenames = adt.doodad_filenames.clone().unwrap();
+        let doodad_placements = adt.doodad_placements.clone().unwrap();
+
+        let mut m2_models: Vec<M2Model> = Vec::new();
+
+        // Group transforms by model path
+        let mut grouped: HashMap<String, Vec<Mat4>> = HashMap::new();
+
+        for entry in &doodad_placements {
+            let path = &doodad_filenames[entry.name_id as usize];
+            grouped
+                .entry(path.clone())
+                .or_default()
+                .push(mddf_to_model_matrix(entry));
+        }
+
+        for path in doodad_filenames.into_iter() {
+            m2_models.push(loader.load_m2(&path).unwrap());
+        }
+
+        let mut m2_renderer = M2Renderer::new(
+            &wgpu.device,
+            wgpu.surface_config.format,
+            &gpu_camera.bind_group_layout,
+        );
+
+        println!("tile {}, {}", adt.tile_x, adt.tile_y);
+        println!("mcnk {:?}", adt.chunks.first().unwrap().position);
+
         self.mouse_locked = Some(false);
         self.camera = Some(camera);
         self.depth_texture = Some(depth_texture);
         self.window = Some(window);
-        self.terrain_renderer = Some(terrain_renderer);
         self.terrain_textures = Some(terrain_textures);
-        self.wgpu = Some(wgpu);
         self.gpu_camera = Some(gpu_camera);
 
         let terrain = scene::terrain::Terrain::from(adt);
-        if let (Some(renderer), Some(wgpu)) = (&mut self.terrain_renderer, &self.wgpu) {
-            renderer.load_terrain(&wgpu.device, &wgpu.queue, &terrain);
+        for chunk in terrain.chunks.iter().take(3) {
+            println!("chunk pos: {:?}", chunk.world_position);
         }
+        terrain_renderer.load_terrain(&wgpu.device, &wgpu.queue, &terrain);
+
+        // Load each unique model once, with all its transforms
+        for (path, transforms) in &grouped {
+            match loader.load_m2(path) {
+                Ok(model) => m2_renderer.load(&wgpu.device, &model, transforms),
+                Err(e) => log::warn!("Failed to load M2 {path}: {e}"),
+            }
+        }
+
+        self.wgpu = Some(wgpu);
+        self.terrain_renderer = Some(terrain_renderer);
+        self.m2_renderer = Some(m2_renderer);
     }
 
     fn device_event(
@@ -246,6 +293,7 @@ impl ApplicationHandler for App {
                     Some(wgpu),
                     Some(terrain_renderer),
                     Some(terrain_textures),
+                    Some(m2_renderer),
                     Some(depth_texture),
                     Some(gpu_camera),
                     Some(camera),
@@ -253,6 +301,7 @@ impl ApplicationHandler for App {
                     &mut self.wgpu,
                     &self.terrain_renderer,
                     &self.terrain_textures,
+                    &self.m2_renderer,
                     &self.depth_texture,
                     &self.gpu_camera,
                     &self.camera,
@@ -301,6 +350,7 @@ impl ApplicationHandler for App {
                         egui_output.pixels_per_point,
                         &mut self.egui_renderer,
                         terrain_textures,
+                        m2_renderer,
                     ) {
                         Ok(_) => {}
                         Err(e) => {

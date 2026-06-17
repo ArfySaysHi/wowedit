@@ -9,3 +9,4 @@ glam = { workspace = true }
 wow-mpq = { workspace = true }
 wow-blp = { workspace = true }
 log = { workspace = true }
+bytemuck = { workspace = true }

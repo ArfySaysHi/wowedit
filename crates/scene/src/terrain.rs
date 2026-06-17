@@ -31,25 +31,28 @@ pub struct TerrainChunk {
 impl From<formats::adt::Adt> for Terrain {
     fn from(adt: formats::adt::Adt) -> Self {
         Self {
-            chunks: adt.chunks.into_iter().map(TerrainChunk::from).collect(),
+            chunks: adt.chunks.into_iter().map(from_mcnk).collect(),
         }
     }
 }
 
-/// In WGPU, x is east / -west and y is up / -down while z is north / -south
-/// This is because WGPU makes sense. WoW being a snowflake decides to do:
-/// y as -east / west and z as up / -down while x is -north / south
-fn wow_to_engine(v: Vec3) -> Vec3 {
-    Vec3::new(-v.y, v.z, -v.x)
-}
+fn from_mcnk(mcnk: formats::adt::Mcnk) -> TerrainChunk {
+    let wow_pos = Vec3::new(
+        mcnk.position.x,
+        mcnk.position.z, // z is height in MCNK too
+        mcnk.position.y,
+    );
 
-impl From<formats::adt::Mcnk> for TerrainChunk {
-    fn from(mcnk: formats::adt::Mcnk) -> Self {
-        Self {
-            world_position: wow_to_engine(mcnk.position),
-            heights: mcnk.heights,
-            mcal: mcnk.mcal,
-            layers: mcnk.layers,
-        }
+    let engine_pos = Vec3::new(
+        -wow_pos.z, // engine X = -wow Z
+        wow_pos.y,  // engine Y = height
+        -wow_pos.x, // engine Z = -wow X
+    );
+
+    TerrainChunk {
+        world_position: engine_pos,
+        heights: mcnk.heights,
+        mcal: mcnk.mcal,
+        layers: mcnk.layers,
     }
 }

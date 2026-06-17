@@ -1,4 +1,5 @@
 use anyhow::Result;
+use glam::Vec3;
 use std::io::{BufRead, Cursor, Read, Seek, SeekFrom};
 
 pub fn read_u32_at(r: &mut Cursor<&[u8]>, offset: u64) -> Result<u32> {
@@ -27,6 +28,18 @@ pub fn read_f32(r: &mut Cursor<&[u8]>) -> Result<f32> {
     Ok(f32::from_le_bytes(buf))
 }
 
+pub fn read_nullterm_string(r: &mut Cursor<&[u8]>) -> Result<String> {
+    let mut buf: Vec<u8> = Vec::new();
+    r.read_until(0, &mut buf)?;
+
+    // We don't actually want the null terminator
+    if buf.last() == Some(&0) {
+        buf.pop();
+    }
+
+    Ok(String::from_utf8_lossy(&buf).into_owned())
+}
+
 pub fn read_nullterm_strings_at(r: &mut Cursor<&[u8]>, offset: u64) -> Result<Vec<String>> {
     r.seek(SeekFrom::Start(offset))?;
 
@@ -52,4 +65,11 @@ pub fn read_nullterm_strings_at(r: &mut Cursor<&[u8]>, offset: u64) -> Result<Ve
     }
 
     Ok(strings)
+}
+
+/// In WGPU, x is east / -west and y is up / -down while z is north / -south
+/// This is because WGPU makes sense. WoW being a snowflake decides to do:
+/// y as -east / west and z as up / -down while x is -north / south
+pub fn wow_to_engine(v: Vec3) -> Vec3 {
+    Vec3::new(-v.y, v.z, -v.x)
 }
