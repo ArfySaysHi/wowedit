@@ -2,10 +2,22 @@ use crate::io::read_u32;
 use anyhow::{Result, bail};
 use std::io::{Cursor, Read, Seek, SeekFrom};
 
-/// Contains the indices for an m2 model
 #[derive(Debug)]
+pub struct M2Submesh {
+    pub start_index: u32, // offset into the triangle index list
+    pub index_count: u32, // how many indices this submesh uses
+}
+
+#[derive(Debug)]
+pub struct M2Batch {
+    pub submesh_index: u16, // indexes into submeshes array
+    pub texture_combo_index: u16,
+}
+
+#[derive(Debug)]
+/// Contains the indices for an m2 model
 pub struct M2Skin {
-    pub indices: Vec<u32>, // Flattened triangle list that indexes into M2Vertex
+    pub indices: Vec<u32>,
 }
 
 /// Skin format is a 4 byte magic b"SKIN"
@@ -26,6 +38,12 @@ pub fn parse_skin(data: &[u8]) -> Result<M2Skin> {
     let vertex_indices_offset = read_u32(&mut r)? as usize;
     let triangle_count = read_u32(&mut r)? as usize;
     let triangle_offset = read_u32(&mut r)? as usize;
+    let _properties_count = read_u32(&mut r)? as usize;
+    let _properties_offset = read_u32(&mut r)? as usize;
+    // let submesh_count = read_u32(&mut r)? as usize;
+    // let submesh_offset = read_u32(&mut r)? as usize;
+    // let batch_count = read_u32(&mut r)? as usize;
+    // let batch_offset = read_u32(&mut r)? as usize;
 
     // Read the vertex remapping table
     let mut vertex_indices = Vec::with_capacity(vertex_indices_count);

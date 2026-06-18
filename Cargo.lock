@@ -2981,6 +2981,7 @@ dependencies = [
  "bytemuck",
  "formats",
  "glam",
+ "log",
  "pollster",
  "scene",
  "wgpu",

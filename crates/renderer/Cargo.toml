@@ -10,3 +10,4 @@ bytemuck = { workspace = true }
 scene = { path = "../scene" }
 formats = { path = "../formats" }
 pollster = { workspace = true }
+log = { workspace = true }

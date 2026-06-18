@@ -66,7 +66,6 @@ pub fn parse(data: &[u8]) -> Result<Adt> {
                 let mut data = vec![0u8; header.size as usize];
                 r.read_exact(&mut data)?;
                 raw_mddf = Some(mddf::parse(&data)?);
-                println!("{:?}", raw_mddf.as_ref().unwrap().first());
                 continue;
             }
 

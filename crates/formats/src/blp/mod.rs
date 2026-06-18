@@ -1,6 +1,7 @@
 use anyhow::Result;
 use wow_blp::{convert::blp_to_image, parser::load_blp_from_buf};
 
+#[derive(Debug)]
 pub struct BlpImage {
     pub rgba: Vec<u8>,
     pub width: u32,

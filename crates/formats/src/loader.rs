@@ -5,7 +5,7 @@ use crate::{
         m2_model::M2Model,
         m2_skin::{M2Skin, parse_skin},
         m2_texture::get_texture_path,
-        parse_header, parse_textures, parse_vertices,
+        parse_header, parse_texture_lookup, parse_textures, parse_vertices,
     },
     storage::Storage,
     version::WoWVersion,
@@ -43,6 +43,30 @@ impl AssetLoader {
         Ok(textures)
     }
 
+    pub fn load_m2_textures(&self, model: &M2Model) -> Result<Vec<Option<BlpImage>>> {
+        let images = model
+            .texture_paths
+            .iter()
+            .map(|path| {
+                let normalized = path.replace('\\', "/");
+                match self.storage.read_to_end(&normalized) {
+                    Ok(data) => match crate::blp::decode(&data) {
+                        Ok(image) => Some(image),
+                        Err(e) => {
+                            log::warn!("Failed to decode BLP {normalized}: {e}");
+                            None
+                        }
+                    },
+                    Err(e) => {
+                        log::warn!("Failed to load texture {normalized}: {e}");
+                        None
+                    }
+                }
+            })
+            .collect();
+        Ok(images)
+    }
+
     pub fn load_adt(&self, map_name: &str, x: u8, y: u8) -> Result<Adt> {
         let path = format!("world/maps/{map_name}/{map_name}_{x}_{y}.adt");
         let data = self.storage.read_to_end(&path)?;
@@ -71,6 +95,11 @@ impl AssetLoader {
             header.textures_offset as usize,
             header.textures_count as usize,
         )?;
+        let texture_lookup = parse_texture_lookup(
+            &data,
+            header.texture_lookup_offset as usize,
+            header.texture_lookup_count as usize,
+        )?;
         // Not sure what to do with missing texture_paths, for now just let nature take its course I
         // guess and just throw an unwrap() on it. The development equivalent of trustmebro
         let texture_paths = textures
@@ -78,8 +107,7 @@ impl AssetLoader {
             .map(|tex| get_texture_path(&data, tex.filename_offset as usize).unwrap())
             .collect::<Vec<_>>();
 
-        // TODO: Fragile, should be done better (at least normalize the path or w/e)
-        let skin_path = path.replace(".M2", "00.SKIN");
+        let skin_path = path.to_uppercase().replace(".M2", "00.SKIN");
         let skin = self.load_skin(&skin_path)?;
 
         // finish adding texture paths then get something rendered, needs an m2 pipeline so make
@@ -88,6 +116,7 @@ impl AssetLoader {
             vertices,
             indices: skin.indices,
             texture_paths,
+            texture_lookup,
         })
     }
 }

@@ -3,6 +3,7 @@ use wgpu::*;
 
 pub struct M2Pipeline {
     pub pipeline: RenderPipeline,
+    pub texture_layout: BindGroupLayout,
 }
 
 impl M2Pipeline {
@@ -12,9 +13,31 @@ impl M2Pipeline {
         camera_layout: &BindGroupLayout,
     ) -> Self {
         let shader = device.create_shader_module(include_wgsl!("../shaders/m2.wgsl"));
+        let texture_layout = device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+            label: Some("m2_texture_layout"),
+            entries: &[
+                BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: ShaderStages::FRAGMENT,
+                    ty: BindingType::Texture {
+                        sample_type: TextureSampleType::Float { filterable: true },
+                        view_dimension: TextureViewDimension::D2,
+                        multisampled: false,
+                    },
+                    count: None,
+                },
+                BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: ShaderStages::FRAGMENT,
+                    ty: BindingType::Sampler(SamplerBindingType::Filtering),
+                    count: None,
+                },
+            ],
+        });
+
         let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
             label: Some("m2_layout"),
-            bind_group_layouts: &[Some(camera_layout)],
+            bind_group_layouts: &[Some(camera_layout), Some(&texture_layout)],
             immediate_size: 0,
         });
 
@@ -54,6 +77,9 @@ impl M2Pipeline {
             cache: None,
         });
 
-        Self { pipeline }
+        Self {
+            pipeline,
+            texture_layout,
+        }
     }
 }

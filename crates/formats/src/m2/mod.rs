@@ -15,10 +15,12 @@ pub mod m2_vertex;
 pub struct M2Header {
     // magic: [u8; 4]  — always b"MD20", read and validate but don't store
     // version: u32    — should be 264 for WotLK
-    pub vertices_count: u32,  // at byte offset 56
-    pub vertices_offset: u32, // at byte offset 60
-    pub textures_count: u32,  // at offset 80
-    pub textures_offset: u32, // at offset 84
+    pub vertices_count: u32,
+    pub vertices_offset: u32,
+    pub textures_count: u32,
+    pub textures_offset: u32,
+    pub texture_lookup_count: u32,
+    pub texture_lookup_offset: u32,
 }
 
 pub fn parse_header(data: &[u8]) -> Result<M2Header> {
@@ -30,11 +32,19 @@ pub fn parse_header(data: &[u8]) -> Result<M2Header> {
         bail!("Not an M2 file");
     }
 
+    let header_bytes = &data[..0x88.min(data.len())];
+    for (i, chunk) in header_bytes.chunks(4).enumerate() {
+        let val = u32::from_le_bytes(chunk.try_into().unwrap_or([0; 4]));
+        log::info!("  [{:#04x}] = {}", i * 4, val);
+    }
+
     Ok(M2Header {
         vertices_count: read_u32_at(&mut r, 0x3C)?,
         vertices_offset: read_u32_at(&mut r, 0x40)?,
         textures_count: read_u32_at(&mut r, 0x50)?,
         textures_offset: read_u32_at(&mut r, 0x54)?,
+        texture_lookup_count: read_u32_at(&mut r, 0x70)?,
+        texture_lookup_offset: read_u32_at(&mut r, 0x74)?,
     })
 }
 
@@ -82,4 +92,15 @@ pub fn parse_textures(data: &[u8], offset: usize, count: usize) -> Result<Vec<M2
     }
 
     Ok(textures)
+}
+pub fn parse_texture_lookup(data: &[u8], offset: usize, count: usize) -> Result<Vec<u16>> {
+    let mut r = Cursor::new(data);
+    r.seek(SeekFrom::Start(offset as u64))?;
+    let mut table = Vec::with_capacity(count);
+    for _ in 0..count {
+        let mut b = [0u8; 2];
+        r.read_exact(&mut b)?;
+        table.push(u16::from_le_bytes(b));
+    }
+    Ok(table)
 }

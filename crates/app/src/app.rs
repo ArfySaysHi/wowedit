@@ -1,7 +1,7 @@
 use crate::wgpu_state::WgpuState;
 use formats::{
-    adt::mddf::mddf_to_model_matrix, loader::AssetLoader, m2::m2_model::M2Model,
-    storage::CompoundStorage, version::WoWVersion,
+    adt::mddf::mddf_to_model_matrix, loader::AssetLoader, storage::CompoundStorage,
+    version::WoWVersion,
 };
 use glam::{Mat4, Vec3};
 use renderer::{
@@ -158,8 +158,6 @@ impl ApplicationHandler for App {
         let doodad_filenames = adt.doodad_filenames.clone().unwrap();
         let doodad_placements = adt.doodad_placements.clone().unwrap();
 
-        let mut m2_models: Vec<M2Model> = Vec::new();
-
         // Group transforms by model path
         let mut grouped: HashMap<String, Vec<Mat4>> = HashMap::new();
 
@@ -169,12 +167,6 @@ impl ApplicationHandler for App {
                 .entry(path.clone())
                 .or_default()
                 .push(mddf_to_model_matrix(entry));
-        }
-
-        println!("grouped: {:#?}", grouped);
-
-        for path in doodad_filenames.into_iter() {
-            m2_models.push(loader.load_m2(&path).unwrap());
         }
 
         let mut m2_renderer = M2Renderer::new(
@@ -191,15 +183,15 @@ impl ApplicationHandler for App {
         self.gpu_camera = Some(gpu_camera);
 
         let terrain = scene::terrain::Terrain::from(adt);
-        for chunk in terrain.chunks.iter().take(3) {
-            println!("chunk pos: {:?}", chunk.world_position);
-        }
         terrain_renderer.load_terrain(&wgpu.device, &wgpu.queue, &terrain);
 
         // Load each unique model once, with all its transforms
         for (path, transforms) in &grouped {
             match loader.load_m2(path) {
-                Ok(model) => m2_renderer.load(&wgpu.device, &model, transforms),
+                Ok(model) => {
+                    let blp_images = loader.load_m2_textures(&model).unwrap_or_default();
+                    m2_renderer.load(&wgpu.device, &wgpu.queue, &model, transforms, &blp_images);
+                }
                 Err(e) => log::warn!("Failed to load M2 {path}: {e}"),
             }
         }
