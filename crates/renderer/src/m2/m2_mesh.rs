@@ -1,5 +1,5 @@
 use crate::m2::m2_vertex::M2GpuVertex;
-use formats::m2::m2_model::M2Model;
+use formats::m2::m2_resolved_mesh::M2ResolvedMesh;
 use wgpu::util::DeviceExt;
 
 pub struct M2GpuMesh {
@@ -9,7 +9,7 @@ pub struct M2GpuMesh {
 }
 
 impl M2GpuMesh {
-    pub fn upload(device: &wgpu::Device, model: &M2Model) -> Self {
+    pub fn upload(device: &wgpu::Device, model: &M2ResolvedMesh) -> Self {
         let gpu_vertices: Vec<M2GpuVertex> = model
             .vertices
             .iter()

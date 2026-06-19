@@ -6,6 +6,7 @@ use anyhow::{Result, bail};
 use std::io::{Cursor, Read, Seek, SeekFrom};
 
 pub mod m2_model;
+pub mod m2_resolved_mesh;
 pub mod m2_skin;
 pub mod m2_texture;
 pub mod m2_vertex;
@@ -30,12 +31,6 @@ pub fn parse_header(data: &[u8]) -> Result<M2Header> {
     r.read_exact(&mut magic)?;
     if &magic != b"MD20" {
         bail!("Not an M2 file");
-    }
-
-    let header_bytes = &data[..0x88.min(data.len())];
-    for (i, chunk) in header_bytes.chunks(4).enumerate() {
-        let val = u32::from_le_bytes(chunk.try_into().unwrap_or([0; 4]));
-        log::info!("  [{:#04x}] = {}", i * 4, val);
     }
 
     Ok(M2Header {

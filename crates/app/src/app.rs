@@ -187,10 +187,9 @@ impl ApplicationHandler for App {
 
         // Load each unique model once, with all its transforms
         for (path, transforms) in &grouped {
-            match loader.load_m2(path) {
+            match loader.load_m2_resolved(path) {
                 Ok(model) => {
-                    let blp_images = loader.load_m2_textures(&model).unwrap_or_default();
-                    m2_renderer.load(&wgpu.device, &wgpu.queue, &model, transforms, &blp_images);
+                    m2_renderer.load(&wgpu.device, &model, transforms);
                 }
                 Err(e) => log::warn!("Failed to load M2 {path}: {e}"),
             }

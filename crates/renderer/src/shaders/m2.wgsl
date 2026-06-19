@@ -3,9 +3,6 @@ struct Camera {
 }
 @group(0) @binding(0) var<uniform> camera: Camera;
 
-@group(1) @binding(0) var m2_texture: texture_2d<f32>;
-@group(1) @binding(1) var m2_sampler: sampler;
-
 struct VertexInput {
     // Per-vertex data
     @location(0) position: vec3<f32>,
@@ -43,10 +40,5 @@ fn vs_main(in: VertexInput) -> VertexOutput {
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    // adhoc alpha without maps
-    let color = textureSample(m2_texture, m2_sampler, in.uv);
-    if color.a < 0.5 {
-        discard;
-    }
-    return color;
+    return vec4<f32>(0.4, 0.0, 0.4, 1.0);
 }

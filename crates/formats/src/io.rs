@@ -28,6 +28,18 @@ pub fn read_f32(r: &mut Cursor<&[u8]>) -> Result<f32> {
     Ok(f32::from_le_bytes(buf))
 }
 
+pub fn read_u16(r: &mut Cursor<&[u8]>) -> Result<u16> {
+    let mut buf = [0u8; 2];
+    r.read_exact(&mut buf)?;
+    Ok(u16::from_le_bytes(buf))
+}
+
+pub fn read_u8(r: &mut Cursor<&[u8]>) -> Result<u8> {
+    let mut buf = [0u8; 1];
+    r.read_exact(&mut buf)?;
+    Ok(u8::from_le_bytes(buf))
+}
+
 pub fn read_nullterm_string(r: &mut Cursor<&[u8]>) -> Result<String> {
     let mut buf: Vec<u8> = Vec::new();
     r.read_until(0, &mut buf)?;
