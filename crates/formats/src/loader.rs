@@ -1,6 +1,6 @@
 use crate::{
     adt::{self, Adt},
-    blp::BlpImage,
+    blp::{BlpImage, decode},
     m2::{
         m2_model::M2Model,
         m2_resolved_mesh::M2ResolvedMesh,
@@ -76,12 +76,6 @@ impl AssetLoader {
             header.textures_count as usize,
         )?;
 
-        let texture_lookup = parse_texture_lookup(
-            &data,
-            header.texture_lookup_offset as usize,
-            header.texture_lookup_count as usize,
-        )?;
-
         let texture_paths = textures
             .iter()
             .map(|tex| {
@@ -89,6 +83,12 @@ impl AssetLoader {
                     .unwrap_or_else(|_| "unknown.blp".to_string())
             })
             .collect::<Vec<_>>();
+
+        let texture_lookup = parse_texture_lookup(
+            &data,
+            header.texture_lookup_offset as usize,
+            header.texture_lookup_count as usize,
+        )?;
 
         Ok(M2Model {
             vertices,
@@ -102,6 +102,11 @@ impl AssetLoader {
         let skin_path = path.to_uppercase().replace(".M2", "00.SKIN");
         let skin = self.load_skin(&skin_path)?;
 
-        Ok(M2ResolvedMesh::new(&model, &skin))
+        Ok(M2ResolvedMesh::new(model, skin))
+    }
+
+    pub fn load_blp(&self, path: &str) -> Result<BlpImage> {
+        let raw = self.storage.read_to_end(path)?;
+        decode(&raw)
     }
 }

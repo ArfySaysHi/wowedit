@@ -32,7 +32,7 @@ pub struct M2Skin {
     pub batches: Vec<M2Batch>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct M2Submesh {
     pub id: u16,
     pub level: u16,
@@ -53,17 +53,22 @@ pub struct M2Submesh {
     pub sort_radius: f32,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct M2Batch {
     pub flags: u8,
     pub priority: u8,
     pub shader_id: u16,
 
     pub submesh_index: u16,
-    pub material_index: u16,
+    pub flags2: u16,
 
-    pub texture_index: u16,
-    pub tex_unit_index: u16,
+    pub color_index: u16,
+    pub material_index: u16,
+    pub material_layer: u16,
+
+    pub texture_count: u16,
+    pub texture_combo_index: u16,
+    pub texture_coord_combo_index: u16,
 
     pub transparency_index: u16,
     pub texture_anim_index: u16,
@@ -134,10 +139,15 @@ fn read_batches(header: &M2SkinHeader, r: &mut Cursor<&[u8]>) -> Result<Vec<M2Ba
             shader_id: read_u16(r)?,
 
             submesh_index: read_u16(r)?,
-            material_index: read_u16(r)?,
+            flags2: read_u16(r)?,
 
-            texture_index: read_u16(r)?,
-            tex_unit_index: read_u16(r)?,
+            color_index: read_u16(r)?,
+            material_index: read_u16(r)?,
+            material_layer: read_u16(r)?,
+
+            texture_count: read_u16(r)?,
+            texture_combo_index: read_u16(r)?,
+            texture_coord_combo_index: read_u16(r)?,
 
             transparency_index: read_u16(r)?,
             texture_anim_index: read_u16(r)?,

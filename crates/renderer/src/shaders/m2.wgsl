@@ -3,6 +3,9 @@ struct Camera {
 }
 @group(0) @binding(0) var<uniform> camera: Camera;
 
+@group(1) @binding(0) var t_diffuse: texture_2d<f32>;
+@group(1) @binding(1) var s_diffuse: sampler;
+
 struct VertexInput {
     // Per-vertex data
     @location(0) position: vec3<f32>,
@@ -40,5 +43,5 @@ fn vs_main(in: VertexInput) -> VertexOutput {
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    return vec4<f32>(0.4, 0.0, 0.4, 1.0);
+    return textureSample(t_diffuse, s_diffuse, in.uv);
 }

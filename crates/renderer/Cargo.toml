@@ -11,3 +11,4 @@ scene = { path = "../scene" }
 formats = { path = "../formats" }
 pollster = { workspace = true }
 log = { workspace = true }
+anyhow = { workspace = true }

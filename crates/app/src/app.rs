@@ -11,6 +11,7 @@ use renderer::{
         terrain_mipmap::TerrainMipmapGenerator, terrain_renderer::TerrainRenderer,
         terrain_textures::TerrainTextures,
     },
+    texture_manager::TextureManager,
 };
 use scene::camera::Camera;
 use std::{collections::HashMap, sync::Arc};
@@ -37,6 +38,7 @@ pub struct App {
     egui_ctx: egui::Context,
     egui_winit: Option<egui_winit::State>,
     egui_renderer: Option<egui_wgpu::Renderer>,
+    texture_manager: Option<TextureManager>,
 }
 
 impl App {
@@ -169,10 +171,12 @@ impl ApplicationHandler for App {
                 .push(mddf_to_model_matrix(entry));
         }
 
+        let mut texture_manager = TextureManager::new(&wgpu.device);
         let mut m2_renderer = M2Renderer::new(
             &wgpu.device,
             wgpu.surface_config.format,
             &gpu_camera.bind_group_layout,
+            &texture_manager.bind_group_layout,
         );
 
         self.mouse_locked = Some(false);
@@ -189,7 +193,33 @@ impl ApplicationHandler for App {
         for (path, transforms) in &grouped {
             match loader.load_m2_resolved(path) {
                 Ok(model) => {
-                    m2_renderer.load(&wgpu.device, &model, transforms);
+                    // First, ensure every texture this model references is loaded,
+                    // and keep their TextureManager indices alongside texture_paths
+                    // (same order, so position i here == texture_paths[i]'s index).
+                    let path_indices: Vec<u32> = model
+                        .texture_paths
+                        .iter()
+                        .map(|p| {
+                            texture_manager
+                                .get_or_load(&wgpu.device, &wgpu.queue, &loader, p)
+                                .unwrap()
+                        })
+                        .collect();
+
+                    // Resolves a batch's texture_combo_index through the two-hop
+                    // chain (texture_combo_index -> texture_lookup -> texture_paths)
+                    // down to a loaded GpuTexture with its own bind group.
+                    let resolve_texture = {
+                        let texture_lookup = model.texture_lookup.clone();
+                        let texture_manager = &texture_manager;
+                        move |texture_combo_index: usize| -> Option<Arc<renderer::texture_manager::GpuTexture>> {
+        let path_index = *texture_lookup.get(texture_combo_index)? as usize;
+        let tex_manager_index = *path_indices.get(path_index)?;
+        texture_manager.get(tex_manager_index).cloned()
+    }
+                    };
+
+                    m2_renderer.load(&wgpu.device, &model, transforms, resolve_texture);
                 }
                 Err(e) => log::warn!("Failed to load M2 {path}: {e}"),
             }
@@ -198,6 +228,7 @@ impl ApplicationHandler for App {
         self.wgpu = Some(wgpu);
         self.terrain_renderer = Some(terrain_renderer);
         self.m2_renderer = Some(m2_renderer);
+        self.texture_manager = Some(texture_manager);
     }
 
     fn device_event(

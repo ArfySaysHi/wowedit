@@ -10,11 +10,12 @@ impl M2Pipeline {
         device: &Device,
         surface_format: TextureFormat,
         camera_layout: &BindGroupLayout,
+        texture_layout: &BindGroupLayout,
     ) -> Self {
         let shader = device.create_shader_module(include_wgsl!("../shaders/m2.wgsl"));
         let pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
             label: Some("m2_layout"),
-            bind_group_layouts: &[Some(camera_layout)],
+            bind_group_layouts: &[Some(camera_layout), Some(texture_layout)],
             immediate_size: 0,
         });
 

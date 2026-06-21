@@ -1,3 +1,4 @@
+use crate::m2::m2_renderer::M2Instance;
 use wgpu::util::DeviceExt;
 
 pub struct M2InstanceBuffer {
@@ -15,22 +16,22 @@ impl M2InstanceBuffer {
 
     pub fn desc() -> wgpu::VertexBufferLayout<'static> {
         wgpu::VertexBufferLayout {
-            array_stride: 64, // size of one mat4x4
+            array_stride: std::mem::size_of::<M2Instance>() as wgpu::BufferAddress,
             step_mode: wgpu::VertexStepMode::Instance,
             attributes: &Self::ATTRIBS,
         }
     }
 
-    pub fn upload(device: &wgpu::Device, matrices: &[[f32; 16]]) -> Self {
+    pub fn upload(device: &wgpu::Device, instances: &[M2Instance]) -> Self {
         let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("m2_instance_buffer"),
-            contents: bytemuck::cast_slice(matrices),
+            contents: bytemuck::cast_slice(instances),
             usage: wgpu::BufferUsages::VERTEX,
         });
 
         Self {
             buffer,
-            count: matrices.len() as u32,
+            count: instances.len() as u32,
         }
     }
 }

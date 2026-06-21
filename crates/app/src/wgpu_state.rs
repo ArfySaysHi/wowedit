@@ -33,6 +33,7 @@ impl WgpuState {
                 force_fallback_adapter: false,
             })
             .await?;
+
         let (device, queue) = adapter
             .request_device(&wgpu::DeviceDescriptor {
                 label: Some("device"),
