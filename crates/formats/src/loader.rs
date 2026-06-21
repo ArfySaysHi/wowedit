@@ -6,7 +6,7 @@ use crate::{
         m2_resolved_mesh::M2ResolvedMesh,
         m2_skin::{M2Skin, parse_skin},
         m2_texture::get_texture_path,
-        parse_header, parse_texture_lookup, parse_textures, parse_vertices,
+        parse_header, parse_render_flags, parse_texture_lookup, parse_textures, parse_vertices,
     },
     storage::Storage,
     version::WoWVersion,
@@ -90,10 +90,17 @@ impl AssetLoader {
             header.texture_lookup_count as usize,
         )?;
 
+        let materials = parse_render_flags(
+            &data,
+            header.materials_offset as usize,
+            header.materials_count as usize,
+        )?;
+
         Ok(M2Model {
             vertices,
             texture_paths,
             texture_lookup,
+            materials,
         })
     }
 

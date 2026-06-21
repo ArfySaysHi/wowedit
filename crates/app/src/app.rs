@@ -219,6 +219,17 @@ impl ApplicationHandler for App {
     }
                     };
 
+                    for (i, batch) in model.batches.iter().enumerate() {
+                        let material = model.materials.get(batch.material_index as usize);
+                        log::info!(
+                            "{path} batch {i}: material_index={} material={:?} texture_combo_index={} texture_count={}",
+                            batch.material_index,
+                            material,
+                            batch.texture_combo_index,
+                            batch.texture_count,
+                        );
+                    }
+
                     m2_renderer.load(&wgpu.device, &model, transforms, resolve_texture);
                 }
                 Err(e) => log::warn!("Failed to load M2 {path}: {e}"),

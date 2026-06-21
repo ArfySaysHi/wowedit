@@ -1,5 +1,5 @@
 use crate::{
-    io::{read_f32, read_u32, read_u32_at},
+    io::{read_f32, read_u16, read_u32, read_u32_at},
     m2::{m2_texture::M2Texture, m2_vertex::M2Vertex},
 };
 use anyhow::{Result, bail};
@@ -18,10 +18,34 @@ pub struct M2Header {
     // version: u32    — should be 264 for WotLK
     pub vertices_count: u32,
     pub vertices_offset: u32,
+
     pub textures_count: u32,
     pub textures_offset: u32,
+
+    pub materials_count: u32,
+    pub materials_offset: u32,
+
     pub texture_lookup_count: u32,
     pub texture_lookup_offset: u32,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct M2Material {
+    pub flags: u16,
+    pub blend_mode: u16,
+}
+
+pub fn parse_render_flags(data: &[u8], offset: usize, count: usize) -> Result<Vec<M2Material>> {
+    let mut r = Cursor::new(data);
+    r.seek(SeekFrom::Start(offset as u64))?;
+    let mut materials = Vec::with_capacity(count);
+    for _ in 0..count {
+        materials.push(M2Material {
+            flags: read_u16(&mut r)?,
+            blend_mode: read_u16(&mut r)?,
+        });
+    }
+    Ok(materials)
 }
 
 pub fn parse_header(data: &[u8]) -> Result<M2Header> {
@@ -38,8 +62,10 @@ pub fn parse_header(data: &[u8]) -> Result<M2Header> {
         vertices_offset: read_u32_at(&mut r, 0x40)?,
         textures_count: read_u32_at(&mut r, 0x50)?,
         textures_offset: read_u32_at(&mut r, 0x54)?,
-        texture_lookup_count: read_u32_at(&mut r, 0x70)?,
-        texture_lookup_offset: read_u32_at(&mut r, 0x74)?,
+        materials_count: read_u32_at(&mut r, 0x70)?,
+        materials_offset: read_u32_at(&mut r, 0x74)?,
+        texture_lookup_count: read_u32_at(&mut r, 0x80)?,
+        texture_lookup_offset: read_u32_at(&mut r, 0x84)?,
     })
 }
 
@@ -88,6 +114,7 @@ pub fn parse_textures(data: &[u8], offset: usize, count: usize) -> Result<Vec<M2
 
     Ok(textures)
 }
+
 pub fn parse_texture_lookup(data: &[u8], offset: usize, count: usize) -> Result<Vec<u16>> {
     let mut r = Cursor::new(data);
     r.seek(SeekFrom::Start(offset as u64))?;

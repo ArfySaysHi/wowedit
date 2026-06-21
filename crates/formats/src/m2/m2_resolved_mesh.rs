@@ -1,4 +1,5 @@
 use crate::m2::{
+    M2Material,
     m2_model::M2Model,
     m2_skin::{M2Batch, M2Skin, M2Submesh},
     m2_vertex::M2Vertex,
@@ -13,6 +14,8 @@ pub struct M2ResolvedMesh {
 
     pub texture_paths: Vec<String>,
     pub texture_lookup: Vec<u16>,
+
+    pub materials: Vec<M2Material>,
 }
 
 impl M2ResolvedMesh {
@@ -37,6 +40,7 @@ impl M2ResolvedMesh {
         let batches = skin.batches;
         let texture_paths = model.texture_paths;
         let texture_lookup = model.texture_lookup;
+        let materials = model.materials;
 
         Self {
             vertices,
@@ -45,6 +49,7 @@ impl M2ResolvedMesh {
             batches,
             texture_paths,
             texture_lookup,
+            materials,
         }
     }
 }
