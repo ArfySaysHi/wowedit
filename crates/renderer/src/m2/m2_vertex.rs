@@ -24,8 +24,7 @@ impl M2GpuVertex {
 impl From<M2Vertex> for M2GpuVertex {
     fn from(v: M2Vertex) -> Self {
         Self {
-            // WoW model space: X=south, Z=up → engine space: X=east, Y=up
-            position: [-v.position[1], v.position[2], -v.position[0]],
+            position: [v.position[1], v.position[2], v.position[0]],
             normal: [-v.normal[1], v.normal[2], -v.normal[0]],
             uv: v.tex_coords[0],
         }
